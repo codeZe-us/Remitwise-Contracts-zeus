@@ -1,10 +1,9 @@
 {
   "generators": {
-    "address": 2,
+    "address": 4,
     "nonce": 0
   },
   "auth": [
-    [],
     [
       [
         "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
@@ -12,22 +11,10 @@
           "function": {
             "contract_fn": {
               "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "create_goal",
+              "function_name": "initialize",
               "args": [
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                },
-                {
-                  "string": "Save"
-                },
-                {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 1000
-                  }
-                },
-                {
-                  "u64": 2000000000
                 }
               ]
             }
@@ -43,19 +30,25 @@
           "function": {
             "contract_fn": {
               "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "add_to_goal",
+              "function_name": "add_member",
               "args": [
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "u32": 1
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                },
+                {
+                  "string": "Alice"
                 },
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 500
+                    "lo": 1000
                   }
+                },
+                {
+                  "string": "parent"
                 }
               ]
             }
@@ -63,7 +56,8 @@
           "sub_invocations": []
         }
       ]
-    ]
+    ],
+    []
   ],
   "ledger": {
     "protocol_version": 21,
@@ -75,68 +69,6 @@
     "min_temp_entry_ttl": 16,
     "max_entry_ttl": 6312000,
     "ledger_entries": [
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-            "key": {
-              "symbol": "GOALS"
-            },
-            "durability": "persistent"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-                "key": {
-                  "symbol": "GOALS"
-                },
-                "durability": "persistent",
-                "val": {
-                  "map": []
-                }
-              }
-            },
-            "ext": "v0"
-          },
-          4095
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-            "key": {
-              "symbol": "NEXT_ID"
-            },
-            "durability": "persistent"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-                "key": {
-                  "symbol": "NEXT_ID"
-                },
-                "durability": "persistent",
-                "val": {
-                  "u32": 1
-                }
-              }
-            },
-            "ext": "v0"
-          },
-          4095
-        ]
-      ],
       [
         {
           "contract_data": {
@@ -162,122 +94,34 @@
                     "storage": [
                       {
                         "key": {
-                          "symbol": "AUDIT"
+                          "symbol": "ADDRS"
                         },
                         "val": {
                           "vec": [
                             {
-                              "map": [
-                                {
-                                  "key": {
-                                    "symbol": "caller"
-                                  },
-                                  "val": {
-                                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "operation"
-                                  },
-                                  "val": {
-                                    "symbol": "create"
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "success"
-                                  },
-                                  "val": {
-                                    "bool": true
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "timestamp"
-                                  },
-                                  "val": {
-                                    "u64": 0
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "map": [
-                                {
-                                  "key": {
-                                    "symbol": "caller"
-                                  },
-                                  "val": {
-                                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "operation"
-                                  },
-                                  "val": {
-                                    "symbol": "add"
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "success"
-                                  },
-                                  "val": {
-                                    "bool": true
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "timestamp"
-                                  },
-                                  "val": {
-                                    "u64": 0
-                                  }
-                                }
-                              ]
+                              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                             }
                           ]
                         }
                       },
                       {
                         "key": {
-                          "symbol": "GOALS"
+                          "symbol": "MEMBERS"
                         },
                         "val": {
                           "map": [
                             {
                               "key": {
-                                "u32": 1
+                                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                               },
                               "val": {
                                 "map": [
                                   {
                                     "key": {
-                                      "symbol": "current_amount"
+                                      "symbol": "address"
                                     },
                                     "val": {
-                                      "i128": {
-                                        "hi": 0,
-                                        "lo": 500
-                                      }
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "id"
-                                    },
-                                    "val": {
-                                      "u32": 1
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "locked"
-                                    },
-                                    "val": {
-                                      "bool": true
+                                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                                     }
                                   },
                                   {
@@ -285,34 +129,26 @@
                                       "symbol": "name"
                                     },
                                     "val": {
-                                      "string": "Save"
+                                      "string": "Alice"
                                     }
                                   },
                                   {
                                     "key": {
-                                      "symbol": "owner"
+                                      "symbol": "role"
                                     },
                                     "val": {
-                                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                                      "string": "parent"
                                     }
                                   },
                                   {
                                     "key": {
-                                      "symbol": "target_amount"
+                                      "symbol": "spending_limit"
                                     },
                                     "val": {
                                       "i128": {
                                         "hi": 0,
                                         "lo": 1000
                                       }
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "target_date"
-                                    },
-                                    "val": {
-                                      "u64": 2000000000
                                     }
                                   }
                                 ]
@@ -323,10 +159,10 @@
                       },
                       {
                         "key": {
-                          "symbol": "NEXT_ID"
+                          "symbol": "OWNER"
                         },
                         "val": {
-                          "u32": 1
+                          "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                         }
                       }
                     ]
@@ -444,10 +280,12 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "init"
+                "symbol": "initialize"
               }
             ],
-            "data": "void"
+            "data": {
+              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+            }
           }
         }
       },
@@ -465,10 +303,12 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "init"
+                "symbol": "initialize"
               }
             ],
-            "data": "void"
+            "data": {
+              "bool": true
+            }
           }
         }
       },
@@ -489,7 +329,7 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "create_goal"
+                "symbol": "add_member"
               }
             ],
             "data": {
@@ -498,7 +338,10 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "string": "Save"
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                },
+                {
+                  "string": "Alice"
                 },
                 {
                   "i128": {
@@ -507,7 +350,7 @@
                   }
                 },
                 {
-                  "u64": 2000000000
+                  "string": "parent"
                 }
               ]
             }
@@ -525,25 +368,18 @@
           "v0": {
             "topics": [
               {
-                "symbol": "savings"
+                "symbol": "family"
               },
               {
                 "vec": [
                   {
-                    "symbol": "GoalCreated"
+                    "symbol": "MemberAdded"
                   }
                 ]
               }
             ],
             "data": {
-              "vec": [
-                {
-                  "u32": 1
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                }
-              ]
+              "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
             }
           }
         }
@@ -562,11 +398,11 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "create_goal"
+                "symbol": "add_member"
               }
             ],
             "data": {
-              "u32": 1
+              "bool": true
             }
           }
         }
@@ -588,61 +424,21 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "add_to_goal"
+                "symbol": "update_spending_limit"
               }
             ],
             "data": {
               "vec": [
                 {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "u32": 1
-                },
-                {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 500
-                  }
-                }
-              ]
-            }
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "type_": "contract",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "savings"
-              },
-              {
-                "vec": [
-                  {
-                    "symbol": "FundsAdded"
-                  }
-                ]
-              }
-            ],
-            "data": {
-              "vec": [
-                {
-                  "u32": 1
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                 },
                 {
                   "i128": {
                     "hi": 0,
-                    "lo": 500
+                    "lo": 2000
                   }
                 }
               ]
@@ -661,17 +457,125 @@
           "v0": {
             "topics": [
               {
-                "symbol": "fn_return"
-              },
-              {
-                "symbol": "add_to_goal"
+                "symbol": "log"
               }
             ],
             "data": {
-              "i128": {
-                "hi": 0,
-                "lo": 500
+              "vec": [
+                {
+                  "string": "caught panic 'Only the owner can update spending limits' from contract function 'Symbol(obj#57)'"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                },
+                {
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                },
+                {
+                  "i128": {
+                    "hi": 0,
+                    "lo": 2000
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": true
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "error"
+              },
+              {
+                "error": {
+                  "wasm_vm": "invalid_action"
+                }
               }
+            ],
+            "data": {
+              "string": "caught error from function"
+            }
+          }
+        }
+      },
+      "failed_call": true
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "error"
+              },
+              {
+                "error": {
+                  "wasm_vm": "invalid_action"
+                }
+              }
+            ],
+            "data": {
+              "vec": [
+                {
+                  "string": "contract call failed"
+                },
+                {
+                  "symbol": "update_spending_limit"
+                },
+                {
+                  "vec": [
+                    {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
+                    },
+                    {
+                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                    },
+                    {
+                      "i128": {
+                        "hi": 0,
+                        "lo": 2000
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "failed_call": false
+    },
+    {
+      "event": {
+        "ext": "v0",
+        "contract_id": null,
+        "type_": "diagnostic",
+        "body": {
+          "v0": {
+            "topics": [
+              {
+                "symbol": "error"
+              },
+              {
+                "error": {
+                  "wasm_vm": "invalid_action"
+                }
+              }
+            ],
+            "data": {
+              "string": "escalating error to panic"
             }
           }
         }
