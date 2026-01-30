@@ -4,7 +4,6 @@
     "nonce": 0
   },
   "auth": [
-    [],
     [
       [
         "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
@@ -12,22 +11,28 @@
           "function": {
             "contract_fn": {
               "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "create_goal",
+              "function_name": "create_policy",
               "args": [
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "string": "Car"
+                  "string": "Premium Insurance"
+                },
+                {
+                  "string": "premium"
                 },
                 {
                   "i128": {
-                    "hi": 0,
-                    "lo": 5000
+                    "hi": 4611686018427387903,
+                    "lo": 18446744073709551615
                   }
                 },
                 {
-                  "u64": 2000000000
+                  "i128": {
+                    "hi": 4611686018427387903,
+                    "lo": 18446744073709551615
+                  }
                 }
               ]
             }
@@ -39,77 +44,15 @@
     []
   ],
   "ledger": {
-    "protocol_version": 21,
-    "sequence_number": 0,
-    "timestamp": 0,
+    "protocol_version": 20,
+    "sequence_number": 1,
+    "timestamp": 1000000000,
     "network_id": "0000000000000000000000000000000000000000000000000000000000000000",
-    "base_reserve": 0,
-    "min_persistent_entry_ttl": 4096,
-    "min_temp_entry_ttl": 16,
-    "max_entry_ttl": 6312000,
+    "base_reserve": 10,
+    "min_persistent_entry_ttl": 10,
+    "min_temp_entry_ttl": 10,
+    "max_entry_ttl": 3110400,
     "ledger_entries": [
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-            "key": {
-              "symbol": "GOALS"
-            },
-            "durability": "persistent"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-                "key": {
-                  "symbol": "GOALS"
-                },
-                "durability": "persistent",
-                "val": {
-                  "map": []
-                }
-              }
-            },
-            "ext": "v0"
-          },
-          4095
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-            "key": {
-              "symbol": "NEXT_ID"
-            },
-            "durability": "persistent"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-                "key": {
-                  "symbol": "NEXT_ID"
-                },
-                "durability": "persistent",
-                "val": {
-                  "u32": 1
-                }
-              }
-            },
-            "ext": "v0"
-          },
-          4095
-        ]
-      ],
       [
         {
           "contract_data": {
@@ -135,52 +78,15 @@
                     "storage": [
                       {
                         "key": {
-                          "symbol": "AUDIT"
+                          "symbol": "NEXT_ID"
                         },
                         "val": {
-                          "vec": [
-                            {
-                              "map": [
-                                {
-                                  "key": {
-                                    "symbol": "caller"
-                                  },
-                                  "val": {
-                                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "operation"
-                                  },
-                                  "val": {
-                                    "symbol": "create"
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "success"
-                                  },
-                                  "val": {
-                                    "bool": true
-                                  }
-                                },
-                                {
-                                  "key": {
-                                    "symbol": "timestamp"
-                                  },
-                                  "val": {
-                                    "u64": 0
-                                  }
-                                }
-                              ]
-                            }
-                          ]
+                          "u32": 1
                         }
                       },
                       {
                         "key": {
-                          "symbol": "GOALS"
+                          "symbol": "POLICIES"
                         },
                         "val": {
                           "map": [
@@ -192,13 +98,29 @@
                                 "map": [
                                   {
                                     "key": {
-                                      "symbol": "current_amount"
+                                      "symbol": "active"
+                                    },
+                                    "val": {
+                                      "bool": true
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "coverage_amount"
                                     },
                                     "val": {
                                       "i128": {
-                                        "hi": 0,
-                                        "lo": 0
+                                        "hi": 4611686018427387903,
+                                        "lo": 18446744073709551615
                                       }
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "coverage_type"
+                                    },
+                                    "val": {
+                                      "string": "premium"
                                     }
                                   },
                                   {
@@ -211,10 +133,13 @@
                                   },
                                   {
                                     "key": {
-                                      "symbol": "locked"
+                                      "symbol": "monthly_premium"
                                     },
                                     "val": {
-                                      "bool": true
+                                      "i128": {
+                                        "hi": 4611686018427387903,
+                                        "lo": 18446744073709551615
+                                      }
                                     }
                                   },
                                   {
@@ -222,7 +147,15 @@
                                       "symbol": "name"
                                     },
                                     "val": {
-                                      "string": "Car"
+                                      "string": "Premium Insurance"
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "next_payment_date"
+                                    },
+                                    "val": {
+                                      "u64": 1002592000
                                     }
                                   },
                                   {
@@ -232,38 +165,11 @@
                                     "val": {
                                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                                     }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "target_amount"
-                                    },
-                                    "val": {
-                                      "i128": {
-                                        "hi": 0,
-                                        "lo": 5000
-                                      }
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "target_date"
-                                    },
-                                    "val": {
-                                      "u64": 2000000000
-                                    }
                                   }
                                 ]
                               }
                             }
                           ]
-                        }
-                      },
-                      {
-                        "key": {
-                          "symbol": "NEXT_ID"
-                        },
-                        "val": {
-                          "u32": 1
                         }
                       }
                     ]
@@ -273,7 +179,7 @@
             },
             "ext": "v0"
           },
-          518400
+          518401
         ]
       ],
       [
@@ -306,7 +212,7 @@
             },
             "ext": "v0"
           },
-          6311999
+          3110400
         ]
       ],
       [
@@ -327,7 +233,7 @@
             },
             "ext": "v0"
           },
-          518400
+          518401
         ]
       ]
     ]
@@ -348,52 +254,7 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "init"
-              }
-            ],
-            "data": "void"
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_return"
-              },
-              {
-                "symbol": "init"
-              }
-            ],
-            "data": "void"
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": null,
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_call"
-              },
-              {
-                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
-              },
-              {
-                "symbol": "create_goal"
+                "symbol": "create_policy"
               }
             ],
             "data": {
@@ -402,16 +263,22 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "string": "Car"
+                  "string": "Premium Insurance"
+                },
+                {
+                  "string": "premium"
                 },
                 {
                   "i128": {
-                    "hi": 0,
-                    "lo": 5000
+                    "hi": 4611686018427387903,
+                    "lo": 18446744073709551615
                   }
                 },
                 {
-                  "u64": 2000000000
+                  "i128": {
+                    "hi": 4611686018427387903,
+                    "lo": 18446744073709551615
+                  }
                 }
               ]
             }
@@ -429,12 +296,12 @@
           "v0": {
             "topics": [
               {
-                "symbol": "savings"
+                "symbol": "insure"
               },
               {
                 "vec": [
                   {
-                    "symbol": "GoalCreated"
+                    "symbol": "PolicyCreated"
                   }
                 ]
               }
@@ -466,7 +333,7 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "create_goal"
+                "symbol": "create_policy"
               }
             ],
             "data": {
@@ -492,7 +359,7 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "get_goal"
+                "symbol": "get_policy"
               }
             ],
             "data": {
@@ -515,20 +382,36 @@
                 "symbol": "fn_return"
               },
               {
-                "symbol": "get_goal"
+                "symbol": "get_policy"
               }
             ],
             "data": {
               "map": [
                 {
                   "key": {
-                    "symbol": "current_amount"
+                    "symbol": "active"
+                  },
+                  "val": {
+                    "bool": true
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "coverage_amount"
                   },
                   "val": {
                     "i128": {
-                      "hi": 0,
-                      "lo": 0
+                      "hi": 4611686018427387903,
+                      "lo": 18446744073709551615
                     }
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "coverage_type"
+                  },
+                  "val": {
+                    "string": "premium"
                   }
                 },
                 {
@@ -541,10 +424,13 @@
                 },
                 {
                   "key": {
-                    "symbol": "locked"
+                    "symbol": "monthly_premium"
                   },
                   "val": {
-                    "bool": true
+                    "i128": {
+                      "hi": 4611686018427387903,
+                      "lo": 18446744073709551615
+                    }
                   }
                 },
                 {
@@ -552,7 +438,15 @@
                     "symbol": "name"
                   },
                   "val": {
-                    "string": "Car"
+                    "string": "Premium Insurance"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "next_payment_date"
+                  },
+                  "val": {
+                    "u64": 1002592000
                   }
                 },
                 {
@@ -561,25 +455,6 @@
                   },
                   "val": {
                     "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                  }
-                },
-                {
-                  "key": {
-                    "symbol": "target_amount"
-                  },
-                  "val": {
-                    "i128": {
-                      "hi": 0,
-                      "lo": 5000
-                    }
-                  }
-                },
-                {
-                  "key": {
-                    "symbol": "target_date"
-                  },
-                  "val": {
-                    "u64": 2000000000
                   }
                 }
               ]

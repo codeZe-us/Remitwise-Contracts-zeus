@@ -5,6 +5,7 @@ members = [
     "bill_payments",
     "insurance",
     "family_wallet",
+    "data_migration",
 ]
 resolver = "2"
 
