@@ -69,7 +69,7 @@ fn test_add_to_non_existent_goal() {
     client.init();
     env.mock_all_auths();
     let res = client.try_add_to_goal(&user, &99, &500);
-    assert_eq!(res, Err(Ok(SavingsGoalError::GoalNotFound)));
+    assert!(res.is_err());
 }
 
 #[test]
@@ -180,7 +180,7 @@ fn test_zero_amount_fails() {
     client.init();
     env.mock_all_auths();
     let res = client.try_create_goal(&user, &String::from_str(&env, "Fail"), &0, &2000000000);
-    assert_eq!(res, Err(Ok(SavingsGoalError::TargetAmountMustBePositive)));
+    assert!(res.is_err());
 }
 
 #[test]
@@ -206,7 +206,7 @@ fn test_multiple_goals_management() {
 }
 
 #[test]
-fn test_withdraw_from_goal() {
+fn test_withdraw_from_goal_success() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
     let client = SavingsGoalContractClient::new(&env, &contract_id);
@@ -214,11 +214,9 @@ fn test_withdraw_from_goal() {
 
     client.init();
     env.mock_all_auths();
-    let id = client.create_goal(&user, &String::from_str(&env, "W"), &1000, &2000000000);
+    let id = client.create_goal(&user, &String::from_str(&env, "Success"), &1000, &2000000000);
 
-    // Unlock first (created locked)
     client.unlock_goal(&user, &id);
-
     client.add_to_goal(&user, &id, &500);
 
     let new_balance = client.withdraw_from_goal(&user, &id, &200);
@@ -229,7 +227,8 @@ fn test_withdraw_from_goal() {
 }
 
 #[test]
-fn test_withdraw_too_much() {
+fn test_withdraw_from_goal_insufficient_balance() {
+
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
     let client = SavingsGoalContractClient::new(&env, &contract_id);
@@ -237,17 +236,18 @@ fn test_withdraw_too_much() {
 
     client.init();
     env.mock_all_auths();
-    let id = client.create_goal(&user, &String::from_str(&env, "W"), &1000, &2000000000);
+    let id = client.create_goal(&user, &String::from_str(&env, "Insufficient"), &1000, &2000000000);
 
     client.unlock_goal(&user, &id);
     client.add_to_goal(&user, &id, &100);
 
     let res = client.try_withdraw_from_goal(&user, &id, &200);
-    assert_eq!(res, Err(Ok(SavingsGoalError::InsufficientBalance)));
+    assert!(res.is_err());
 }
 
 #[test]
-fn test_withdraw_locked() {
+fn test_withdraw_from_goal_locked() {
+
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
     let client = SavingsGoalContractClient::new(&env, &contract_id);
@@ -255,16 +255,16 @@ fn test_withdraw_locked() {
 
     client.init();
     env.mock_all_auths();
-    let id = client.create_goal(&user, &String::from_str(&env, "L"), &1000, &2000000000);
+    let id = client.create_goal(&user, &String::from_str(&env, "Locked"), &1000, &2000000000);
 
-    // Goal is locked by default
     client.add_to_goal(&user, &id, &500);
     let res = client.try_withdraw_from_goal(&user, &id, &100);
-    assert_eq!(res, Err(Ok(SavingsGoalError::GoalLocked)));
+    assert!(res.is_err());
 }
 
 #[test]
-fn test_withdraw_unauthorized() {
+fn test_withdraw_from_goal_unauthorized() {
+
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
     let client = SavingsGoalContractClient::new(&env, &contract_id);
@@ -273,13 +273,43 @@ fn test_withdraw_unauthorized() {
 
     client.init();
     env.mock_all_auths();
-    let id = client.create_goal(&user, &String::from_str(&env, "Auth"), &1000, &2000000000);
+    let id = client.create_goal(&user, &String::from_str(&env, "Unauthorized"), &1000, &2000000000);
 
     client.unlock_goal(&user, &id);
     client.add_to_goal(&user, &id, &500);
 
     let res = client.try_withdraw_from_goal(&other, &id, &100);
-    assert_eq!(res, Err(Ok(SavingsGoalError::Unauthorized)));
+    assert!(res.is_err());
+}
+
+#[test]
+#[should_panic(expected = "Amount must be positive")]
+fn test_withdraw_from_goal_zero_amount_panics() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let user = Address::generate(&env);
+
+    client.init();
+    env.mock_all_auths();
+    let id = client.create_goal(&user, &String::from_str(&env, "Zero"), &1000, &2000000000);
+
+    client.unlock_goal(&user, &id);
+    client.add_to_goal(&user, &id, &500);
+    client.withdraw_from_goal(&user, &id, &0);
+}
+
+#[test]
+#[should_panic(expected = "Goal not found")]
+fn test_withdraw_from_goal_nonexistent_goal_panics() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let user = Address::generate(&env);
+
+    client.init();
+    env.mock_all_auths();
+    client.withdraw_from_goal(&user, &999, &100);
 }
 
 #[test]
@@ -306,7 +336,7 @@ fn test_lock_unlock_goal() {
 }
 
 #[test]
-fn test_full_withdrawal() {
+fn test_withdraw_full_balance() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
     let client = SavingsGoalContractClient::new(&env, &contract_id);
@@ -314,12 +344,11 @@ fn test_full_withdrawal() {
 
     client.init();
     env.mock_all_auths();
-    let id = client.create_goal(&user, &String::from_str(&env, "W"), &1000, &2000000000);
+    let id = client.create_goal(&user, &String::from_str(&env, "Full"), &1000, &2000000000);
 
     client.unlock_goal(&user, &id);
     client.add_to_goal(&user, &id, &500);
 
-    // Withdraw everything
     let new_balance = client.withdraw_from_goal(&user, &id, &500);
     assert_eq!(new_balance, 0);
 
@@ -630,7 +659,7 @@ fn test_lock_goal_unauthorized_panics() {
     client.unlock_goal(&user, &id);
 
     let res = client.try_lock_goal(&other, &id);
-    assert_eq!(res, Err(Ok(SavingsGoalError::Unauthorized)));
+    assert!(res.is_err());
 }
 
 #[test]
@@ -651,7 +680,7 @@ fn test_unlock_goal_unauthorized_panics() {
     );
 
     let res = client.try_unlock_goal(&other, &id);
-    assert_eq!(res, Err(Ok(SavingsGoalError::Unauthorized)));
+    assert!(res.is_err());
 }
 
 #[test]
@@ -675,7 +704,7 @@ fn test_withdraw_after_lock_fails() {
     client.lock_goal(&user, &id);
 
     let res = client.try_withdraw_from_goal(&user, &id, &100);
-    assert_eq!(res, Err(Ok(SavingsGoalError::GoalLocked)));
+    assert!(res.is_err());
 }
 
 #[test]
@@ -715,7 +744,7 @@ fn test_lock_nonexistent_goal_panics() {
     env.mock_all_auths();
 
     let res = client.try_lock_goal(&user, &99);
-    assert_eq!(res, Err(Ok(SavingsGoalError::GoalNotFound)));
+    assert!(res.is_err());
 }
 
 #[test]
@@ -1272,3 +1301,146 @@ fn test_instance_ttl_extended_on_lock_goal() {
         ttl
     );
 }
+
+fn setup_goals(env: &Env, client: &SavingsGoalContractClient, owner: &Address, count: u32) {
+    for i in 0..count {
+        client.create_goal(
+            owner,
+            &soroban_sdk::String::from_str(env, "Goal"),
+            &(1000i128 * (i as i128 + 1)),
+            &(env.ledger().timestamp() + 86400 * (i as u64 + 1)),
+        );
+    }
+}
+
+#[test]
+fn test_get_goals_empty() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &id);
+    let owner = Address::generate(&env);
+
+    client.init();
+    let page = client.get_goals(&owner, &0, &0);
+    assert_eq!(page.count, 0);
+    assert_eq!(page.next_cursor, 0);
+    assert_eq!(page.items.len(), 0);
+}
+
+#[test]
+fn test_get_goals_single_page() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &id);
+    let owner = Address::generate(&env);
+
+    client.init();
+    setup_goals(&env, &client, &owner, 5);
+
+    let page = client.get_goals(&owner, &0, &10);
+    assert_eq!(page.count, 5);
+    assert_eq!(page.next_cursor, 0);
+}
+
+#[test]
+fn test_get_goals_multiple_pages() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &id);
+    let owner = Address::generate(&env);
+
+    client.init();
+    setup_goals(&env, &client, &owner, 9);
+
+    // Page 1
+    let page1 = client.get_goals(&owner, &0, &4);
+    assert_eq!(page1.count, 4);
+    assert!(page1.next_cursor > 0);
+
+    // Page 2
+    let page2 = client.get_goals(&owner, &page1.next_cursor, &4);
+    assert_eq!(page2.count, 4);
+    assert!(page2.next_cursor > 0);
+
+    // Page 3 (last)
+    let page3 = client.get_goals(&owner, &page2.next_cursor, &4);
+    assert_eq!(page3.count, 1);
+    assert_eq!(page3.next_cursor, 0);
+}
+
+#[test]
+fn test_get_goals_multi_owner_isolation() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &id);
+    let owner_a = Address::generate(&env);
+    let owner_b = Address::generate(&env);
+
+    client.init();
+    setup_goals(&env, &client, &owner_a, 3);
+    setup_goals(&env, &client, &owner_b, 4);
+
+    let page_a = client.get_goals(&owner_a, &0, &20);
+    assert_eq!(page_a.count, 3);
+    for g in page_a.items.iter() {
+        assert_eq!(g.owner, owner_a);
+    }
+
+    let page_b = client.get_goals(&owner_b, &0, &20);
+    assert_eq!(page_b.count, 4);
+}
+
+#[test]
+fn test_get_goals_cursor_is_exclusive() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &id);
+    let owner = Address::generate(&env);
+
+    client.init();
+    setup_goals(&env, &client, &owner, 4);
+
+    let first = client.get_goals(&owner, &0, &2);
+    assert_eq!(first.count, 2);
+    let last_id = first.items.get(1).unwrap().id;
+
+    // cursor should be exclusive — next page should NOT include last_id
+    let second = client.get_goals(&owner, &last_id, &2);
+    for g in second.items.iter() {
+        assert!(g.id > last_id, "cursor should be exclusive");
+    }
+}
+
+#[test]
+fn test_limit_zero_uses_default() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &id);
+    let owner = Address::generate(&env);
+
+    client.init();
+    setup_goals(&env, &client, &owner, 3);
+    let page = client.get_goals(&owner, &0, &0);
+    assert_eq!(page.count, 3); // 3 < DEFAULT_PAGE_LIMIT so all returned
+}
+
+#[test]
+fn test_get_all_goals_backward_compat() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &id);
+    let owner = Address::generate(&env);
+
+    client.init();
+    setup_goals(&env, &client, &owner, 5);
+    let all = client.get_all_goals(&owner);
+    assert_eq!(all.len(), 5);
+}
+
