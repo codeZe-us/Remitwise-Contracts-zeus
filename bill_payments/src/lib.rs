@@ -558,4 +558,5 @@ impl BillPayments {
 }
 
 // Ensure tests module is linked
+#[cfg(test)]
 mod test;

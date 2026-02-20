@@ -1001,6 +1001,7 @@ impl SavingsGoalContract {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use soroban_sdk::testutils::Events;
