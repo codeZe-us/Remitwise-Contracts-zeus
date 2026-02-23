@@ -581,6 +581,8 @@ impl Insurance {
             (policy_id, caller),
         );
 
+        Self::extend_instance_ttl(&env);
+
         Ok(true)
     }
 

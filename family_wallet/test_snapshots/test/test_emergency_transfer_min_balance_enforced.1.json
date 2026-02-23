@@ -320,6 +320,17 @@
                                     "val": {
                                       "u32": 1
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -1407,7 +1418,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "caught panic 'Emergency transfer would violate minimum balance requirement' from contract function 'Symbol(obj#327)'"
+                  "string": "caught panic 'Emergency transfer would violate minimum balance requirement' from contract function 'Symbol(obj#333)'"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
