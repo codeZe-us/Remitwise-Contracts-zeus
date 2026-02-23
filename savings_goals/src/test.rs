@@ -59,7 +59,6 @@ fn test_add_to_goal_increments() {
 }
 
 #[test]
-#[should_panic] // It will panic because the goal doesn't exist
 fn test_add_to_non_existent_goal() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -68,7 +67,8 @@ fn test_add_to_non_existent_goal() {
 
     client.init();
     env.mock_all_auths();
-    client.add_to_goal(&user, &99, &500);
+    let res = client.try_add_to_goal(&user, &99, &500);
+    assert_eq!(res, Err(Ok(SavingsGoalError::GoalNotFound)));
 }
 
 #[test]
@@ -170,7 +170,6 @@ fn test_edge_cases_large_amounts() {
 }
 
 #[test]
-#[should_panic]
 fn test_zero_amount_fails() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -179,7 +178,8 @@ fn test_zero_amount_fails() {
 
     client.init();
     env.mock_all_auths();
-    client.create_goal(&user, &String::from_str(&env, "Fail"), &0, &2000000000);
+    let res = client.try_create_goal(&user, &String::from_str(&env, "Fail"), &0, &2000000000);
+    assert_eq!(res, Err(Ok(SavingsGoalError::TargetAmountMustBePositive)));
 }
 
 #[test]
@@ -228,7 +228,6 @@ fn test_withdraw_from_goal() {
 }
 
 #[test]
-#[should_panic(expected = "Insufficient balance")]
 fn test_withdraw_too_much() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -242,11 +241,11 @@ fn test_withdraw_too_much() {
     client.unlock_goal(&user, &id);
     client.add_to_goal(&user, &id, &100);
 
-    client.withdraw_from_goal(&user, &id, &200);
+    let res = client.try_withdraw_from_goal(&user, &id, &200);
+    assert_eq!(res, Err(Ok(SavingsGoalError::InsufficientBalance)));
 }
 
 #[test]
-#[should_panic(expected = "Cannot withdraw from a locked goal")]
 fn test_withdraw_locked() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -259,11 +258,11 @@ fn test_withdraw_locked() {
 
     // Goal is locked by default
     client.add_to_goal(&user, &id, &500);
-    client.withdraw_from_goal(&user, &id, &100);
+    let res = client.try_withdraw_from_goal(&user, &id, &100);
+    assert_eq!(res, Err(Ok(SavingsGoalError::GoalLocked)));
 }
 
 #[test]
-#[should_panic(expected = "Only the goal owner can withdraw funds")]
 fn test_withdraw_unauthorized() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -278,7 +277,8 @@ fn test_withdraw_unauthorized() {
     client.unlock_goal(&user, &id);
     client.add_to_goal(&user, &id, &500);
 
-    client.withdraw_from_goal(&other, &id, &100);
+    let res = client.try_withdraw_from_goal(&other, &id, &100);
+    assert_eq!(res, Err(Ok(SavingsGoalError::Unauthorized)));
 }
 
 #[test]
@@ -610,7 +610,6 @@ fn test_unlock_goal_success() {
 }
 
 #[test]
-#[should_panic(expected = "Only the goal owner can lock this goal")]
 fn test_lock_goal_unauthorized_panics() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -629,11 +628,11 @@ fn test_lock_goal_unauthorized_panics() {
 
     client.unlock_goal(&user, &id);
 
-    client.lock_goal(&other, &id);
+    let res = client.try_lock_goal(&other, &id);
+    assert_eq!(res, Err(Ok(SavingsGoalError::Unauthorized)));
 }
 
 #[test]
-#[should_panic(expected = "Only the goal owner can unlock this goal")]
 fn test_unlock_goal_unauthorized_panics() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -650,11 +649,11 @@ fn test_unlock_goal_unauthorized_panics() {
         &2000000000,
     );
 
-    client.unlock_goal(&other, &id);
+    let res = client.try_unlock_goal(&other, &id);
+    assert_eq!(res, Err(Ok(SavingsGoalError::Unauthorized)));
 }
 
 #[test]
-#[should_panic(expected = "Cannot withdraw from a locked goal")]
 fn test_withdraw_after_lock_fails() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -674,7 +673,8 @@ fn test_withdraw_after_lock_fails() {
     client.add_to_goal(&user, &id, &500);
     client.lock_goal(&user, &id);
 
-    client.withdraw_from_goal(&user, &id, &100);
+    let res = client.try_withdraw_from_goal(&user, &id, &100);
+    assert_eq!(res, Err(Ok(SavingsGoalError::GoalLocked)));
 }
 
 #[test]
@@ -704,7 +704,6 @@ fn test_withdraw_after_unlock_succeeds() {
 }
 
 #[test]
-#[should_panic(expected = "Goal not found")]
 fn test_lock_nonexistent_goal_panics() {
     let env = Env::default();
     let contract_id = env.register_contract(None, SavingsGoalContract);
@@ -714,7 +713,8 @@ fn test_lock_nonexistent_goal_panics() {
     client.init();
     env.mock_all_auths();
 
-    client.lock_goal(&user, &99);
+    let res = client.try_lock_goal(&user, &99);
+    assert_eq!(res, Err(Ok(SavingsGoalError::GoalNotFound)));
 }
 
 #[test]
