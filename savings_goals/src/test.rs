@@ -1130,7 +1130,13 @@ fn test_add_to_goal_non_owner_auth_failure() {
         invoke: &soroban_sdk::testutils::MockAuthInvoke {
             contract: &contract_id,
             fn_name: "create_goal",
-            args: (&user, String::from_str(&env, "Auth"), 1000i128, 2000000000u64).into_val(&env),
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
             sub_invokes: &[],
         },
     }]);
@@ -1154,7 +1160,13 @@ fn test_withdraw_from_goal_non_owner_auth_failure() {
         invoke: &soroban_sdk::testutils::MockAuthInvoke {
             contract: &contract_id,
             fn_name: "create_goal",
-            args: (&user, String::from_str(&env, "Auth"), 1000i128, 2000000000u64).into_val(&env),
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
             sub_invokes: &[],
         },
     }]);
@@ -1178,7 +1190,13 @@ fn test_lock_goal_non_owner_auth_failure() {
         invoke: &soroban_sdk::testutils::MockAuthInvoke {
             contract: &contract_id,
             fn_name: "create_goal",
-            args: (&user, String::from_str(&env, "Auth"), 1000i128, 2000000000u64).into_val(&env),
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
             sub_invokes: &[],
         },
     }]);
@@ -1202,7 +1220,13 @@ fn test_unlock_goal_non_owner_auth_failure() {
         invoke: &soroban_sdk::testutils::MockAuthInvoke {
             contract: &contract_id,
             fn_name: "create_goal",
-            args: (&user, String::from_str(&env, "Auth"), 1000i128, 2000000000u64).into_val(&env),
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
             sub_invokes: &[],
         },
     }]);

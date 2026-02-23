@@ -1196,7 +1196,15 @@ mod testsuit {
             invoke: &soroban_sdk::testutils::MockAuthInvoke {
                 contract: &contract_id,
                 fn_name: "create_bill",
-                args: (&owner, String::from_str(&env, "Water"), 500i128, 1000000u64, false, 0u32).into_val(&env),
+                args: (
+                    &owner,
+                    String::from_str(&env, "Water"),
+                    500i128,
+                    1000000u64,
+                    false,
+                    0u32,
+                )
+                    .into_val(&env),
                 sub_invokes: &[],
             },
         }]);
@@ -1228,7 +1236,15 @@ mod testsuit {
             invoke: &soroban_sdk::testutils::MockAuthInvoke {
                 contract: &contract_id,
                 fn_name: "create_bill",
-                args: (&owner, String::from_str(&env, "Water"), 500i128, 1000000u64, false, 0u32).into_val(&env),
+                args: (
+                    &owner,
+                    String::from_str(&env, "Water"),
+                    500i128,
+                    1000000u64,
+                    false,
+                    0u32,
+                )
+                    .into_val(&env),
                 sub_invokes: &[],
             },
         }]);
