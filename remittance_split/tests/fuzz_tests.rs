@@ -25,7 +25,7 @@ fn fuzz_calculate_split_sum_preservation() {
         (1, 25, 25, 25, 25),
         (999, 33, 33, 33, 1),
         (i128::MAX / 100, 25, 25, 25, 25),
-        (12345678, 17, 19, 23, 41),  // Primes
+        (12345678, 17, 19, 23, 41), // Primes
         (100, 1, 1, 1, 97),
         (999999, 10, 20, 30, 40),
         (7, 40, 30, 20, 10),
@@ -71,10 +71,19 @@ fn fuzz_calculate_split_sum_preservation() {
         // Critical invariant: sum must equal total
         let sum = spending + savings + bills + insurance;
         assert_eq!(
-            sum, total_amount,
+            sum,
+            total_amount,
             "Sum mismatch: {} + {} + {} + {} = {} != {} (percentages: {}%, {}%, {}%, {}%)",
-            spending, savings, bills, insurance, sum, total_amount,
-            spending_pct, savings_pct, bills_pct, insurance_pct
+            spending,
+            savings,
+            bills,
+            insurance,
+            sum,
+            total_amount,
+            spending_pct,
+            savings_pct,
+            bills_pct,
+            insurance_pct
         );
 
         // All amounts should be non-negative
@@ -107,13 +116,32 @@ fn fuzz_calculate_split_small_amounts() {
 
         // Verify sum
         let sum = spending + savings + bills + insurance;
-        assert_eq!(sum, amount, "Sum mismatch for amount {}: {} != {}", amount, sum, amount);
+        assert_eq!(
+            sum, amount,
+            "Sum mismatch for amount {}: {} != {}",
+            amount, sum, amount
+        );
 
         // Verify no amount exceeds total
-        assert!(spending <= amount, "Spending {} exceeds total {}", spending, amount);
-        assert!(savings <= amount, "Savings {} exceeds total {}", savings, amount);
+        assert!(
+            spending <= amount,
+            "Spending {} exceeds total {}",
+            spending,
+            amount
+        );
+        assert!(
+            savings <= amount,
+            "Savings {} exceeds total {}",
+            savings,
+            amount
+        );
         assert!(bills <= amount, "Bills {} exceeds total {}", bills, amount);
-        assert!(insurance <= amount, "Insurance {} exceeds total {}", insurance, amount);
+        assert!(
+            insurance <= amount,
+            "Insurance {} exceeds total {}",
+            insurance,
+            amount
+        );
     }
 }
 
@@ -135,7 +163,14 @@ fn fuzz_rounding_behavior() {
         let client = RemittanceSplitClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
 
-        client.initialize_split(&owner, &0, &spending_pct, &savings_pct, &bills_pct, &insurance_pct);
+        client.initialize_split(
+            &owner,
+            &0,
+            &spending_pct,
+            &savings_pct,
+            &bills_pct,
+            &insurance_pct,
+        );
 
         // Test various amounts
         for amount in &[100, 1000, 9999, 123456] {
@@ -148,10 +183,19 @@ fn fuzz_rounding_behavior() {
 
             let sum = spending + savings + bills + insurance;
             assert_eq!(
-                sum, *amount,
+                sum,
+                *amount,
                 "Rounding error: {} + {} + {} + {} = {} != {} (percentages: {}%, {}%, {}%, {}%)",
-                spending, savings, bills, insurance, sum, amount,
-                spending_pct, savings_pct, bills_pct, insurance_pct
+                spending,
+                savings,
+                bills,
+                insurance,
+                sum,
+                amount,
+                spending_pct,
+                savings_pct,
+                bills_pct,
+                insurance_pct
             );
         }
     }
@@ -179,11 +223,11 @@ fn fuzz_invalid_amounts() {
 #[test]
 fn fuzz_invalid_percentages() {
     let invalid_percentages = vec![
-        (50, 50, 10, 0),   // Sum = 110
-        (25, 25, 25, 24),  // Sum = 99
-        (100, 0, 0, 1),    // Sum = 101
-        (0, 0, 0, 0),      // Sum = 0
-        (30, 30, 30, 30),  // Sum = 120
+        (50, 50, 10, 0),  // Sum = 110
+        (25, 25, 25, 24), // Sum = 99
+        (100, 0, 0, 1),   // Sum = 101
+        (0, 0, 0, 0),     // Sum = 0
+        (30, 30, 30, 30), // Sum = 120
     ];
 
     for (spending_pct, savings_pct, bills_pct, insurance_pct) in invalid_percentages {
@@ -206,7 +250,8 @@ fn fuzz_invalid_percentages() {
         if total != 100 {
             assert!(
                 result.is_err(),
-                "Expected error for percentages summing to {}", total
+                "Expected error for percentages summing to {}",
+                total
             );
         }
     }
@@ -243,7 +288,11 @@ fn fuzz_large_amounts() {
             let insurance = amounts.get(3).unwrap();
 
             let sum = spending + savings + bills + insurance;
-            assert_eq!(sum, amount, "Sum mismatch for large amount: {} != {}", sum, amount);
+            assert_eq!(
+                sum, amount,
+                "Sum mismatch for large amount: {} != {}",
+                sum, amount
+            );
         }
         // Else overflow is acceptable for very large amounts
     }
@@ -253,10 +302,10 @@ fn fuzz_large_amounts() {
 #[test]
 fn fuzz_single_category_splits() {
     let single_category_splits = vec![
-        (100, 0, 0, 0),  // All to spending
-        (0, 100, 0, 0),  // All to savings
-        (0, 0, 100, 0),  // All to bills
-        (0, 0, 0, 100),  // All to insurance
+        (100, 0, 0, 0), // All to spending
+        (0, 100, 0, 0), // All to savings
+        (0, 0, 100, 0), // All to bills
+        (0, 0, 0, 100), // All to insurance
     ];
 
     for (spending_pct, savings_pct, bills_pct, insurance_pct) in single_category_splits {
@@ -266,7 +315,14 @@ fn fuzz_single_category_splits() {
         let client = RemittanceSplitClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
 
-        client.initialize_split(&owner, &0, &spending_pct, &savings_pct, &bills_pct, &insurance_pct);
+        client.initialize_split(
+            &owner,
+            &0,
+            &spending_pct,
+            &savings_pct,
+            &bills_pct,
+            &insurance_pct,
+        );
 
         let amounts = client.calculate_split(&1000);
 

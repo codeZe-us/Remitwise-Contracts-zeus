@@ -679,7 +679,7 @@ impl SavingsGoalContract {
     ) -> Result<u32, SavingsGoalError> {
         caller.require_auth();
         Self::require_not_paused(&env, pause_functions::ADD_TO_GOAL)?;
-        if contributions.len() as u32 > MAX_BATCH_SIZE {
+        if contributions.len() > MAX_BATCH_SIZE {
             return Err(SavingsGoalError::BatchTooLarge);
         }
         let goals_map: Map<u32, SavingsGoal> = env
@@ -1014,10 +1014,7 @@ impl SavingsGoalContract {
         cursor: Option<u32>,
         limit: Option<u32>,
     ) -> PaginatedGoalsResponse {
-        let effective_limit = limit
-            .unwrap_or(DEFAULT_PAGE_LIMIT)
-            .min(MAX_PAGE_LIMIT)
-            .max(1);
+        let effective_limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT).clamp(1, MAX_PAGE_LIMIT);
 
         let goals: Map<u32, SavingsGoal> = env
             .storage()
