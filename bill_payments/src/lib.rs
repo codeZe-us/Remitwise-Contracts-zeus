@@ -1382,8 +1382,8 @@ mod test {
             &String::from_str(&env, "Daily Bill"),
             &100,
             &base_due_date,
-            &true,  // recurring
-            &1,     // frequency_days = 1
+            &true, // recurring
+            &1,    // frequency_days = 1
         );
 
         // Pay the bill
@@ -1415,8 +1415,8 @@ mod test {
             &String::from_str(&env, "Monthly Bill"),
             &500,
             &base_due_date,
-            &true,  // recurring
-            &30,    // frequency_days = 30
+            &true, // recurring
+            &30,   // frequency_days = 30
         );
 
         // Pay the bill
@@ -1430,7 +1430,10 @@ mod test {
             next_bill.due_date, expected_due_date,
             "Next due date should be exactly 30 days later"
         );
-        assert_eq!(next_bill.frequency_days, 30, "Frequency should be preserved");
+        assert_eq!(
+            next_bill.frequency_days, 30,
+            "Frequency should be preserved"
+        );
     }
 
     #[test]
@@ -1448,8 +1451,8 @@ mod test {
             &String::from_str(&env, "Annual Bill"),
             &1200,
             &base_due_date,
-            &true,   // recurring
-            &365,    // frequency_days = 365
+            &true, // recurring
+            &365,  // frequency_days = 365
         );
 
         // Pay the bill
@@ -1463,7 +1466,10 @@ mod test {
             next_bill.due_date, expected_due_date,
             "Next due date should be exactly 365 days later"
         );
-        assert_eq!(next_bill.frequency_days, 365, "Frequency should be preserved");
+        assert_eq!(
+            next_bill.frequency_days, 365,
+            "Frequency should be preserved"
+        );
     }
 
     #[test]
@@ -1484,8 +1490,8 @@ mod test {
             &String::from_str(&env, "Late Payment Test"),
             &300,
             &base_due_date,
-            &true,  // recurring
-            &30,    // frequency_days = 30
+            &true, // recurring
+            &30,   // frequency_days = 30
         );
 
         // Pay the bill (at time 1_000_500, which is 500 seconds after due_date)
@@ -1527,8 +1533,8 @@ mod test {
             &String::from_str(&env, "Multi-Cycle Bill"),
             &250,
             &base_due_date,
-            &true,  // recurring
-            &30,    // frequency_days = 30
+            &true, // recurring
+            &30,   // frequency_days = 30
         );
 
         // Pay first bill
@@ -1575,8 +1581,8 @@ mod test {
             &String::from_str(&env, "Three-Cycle Bill"),
             &150,
             &base_due_date,
-            &true,  // recurring
-            &30,    // frequency_days = 30
+            &true, // recurring
+            &30,   // frequency_days = 30
         );
 
         // Pay first bill
@@ -1620,8 +1626,8 @@ mod test {
             &String::from_str(&env, "Early Payment Test"),
             &200,
             &base_due_date,
-            &true,  // recurring
-            &30,    // frequency_days = 30
+            &true, // recurring
+            &30,   // frequency_days = 30
         );
 
         // Pay the bill early (at time 500_000)
@@ -1722,14 +1728,7 @@ mod test {
         let owner = Address::generate(&env);
 
         let name = String::from_str(&env, "Rent Payment");
-        let bill_id = client.create_bill(
-            &owner,
-            &name,
-            &1000,
-            &1_000_000,
-            &true,
-            &30,
-        );
+        let bill_id = client.create_bill(&owner, &name, &1000, &1_000_000, &true, &30);
 
         // Pay first bill
         client.pay_bill(&owner, &bill_id);
