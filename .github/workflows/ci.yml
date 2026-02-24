@@ -171,6 +171,9 @@ jobs:
     name: Gas Benchmarks
     runs-on: macos-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout code
