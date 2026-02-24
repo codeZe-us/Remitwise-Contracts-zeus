@@ -292,7 +292,6 @@ const MAX_AUDIT_ENTRIES: u32 = 100;
 #[contract]
 pub struct Orchestrator;
 
-#[allow(clippy::too_many_arguments)]
 #[allow(clippy::manual_inspect)]
 #[contractimpl]
 impl Orchestrator {
@@ -920,6 +919,7 @@ impl Orchestrator {
     /// 8. Pay insurance premium
     /// 9. Build and return result
     /// 10. On error, emit error event and return error
+    #[allow(clippy::too_many_arguments)]
     pub fn execute_remittance_flow(
         env: Env,
         caller: Address,
