@@ -989,12 +989,7 @@ impl SavingsGoalContract {
     }
 
     /// Set time-lock on a goal
-    pub fn set_time_lock(
-        env: Env,
-        caller: Address,
-        goal_id: u32,
-        unlock_date: u64,
-    ) -> bool {
+    pub fn set_time_lock(env: Env, caller: Address, goal_id: u32, unlock_date: u64) -> bool {
         caller.require_auth();
         Self::extend_instance_ttl(&env);
 
@@ -1302,7 +1297,6 @@ impl SavingsGoalContract {
             .unwrap_or_else(|| Map::new(&env));
         schedules.get(schedule_id)
     }
-
 }
 
 // -----------------------------------------------------------------------
