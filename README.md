@@ -157,9 +157,9 @@ cargo test
 
 ## Gas Benchmarks
 
-See `docs/gas-optimization.md` for methodology, before/after results, and assumptions.
+RemitWise includes a comprehensive gas benchmarking harness for tracking and optimizing contract performance.
 
-### Running Locally
+### Quick Start
 
 Run all benchmarks and generate a JSON report:
 
@@ -169,7 +169,47 @@ Run all benchmarks and generate a JSON report:
 
 This creates `gas_results.json` with CPU and memory costs for all contract operations.
 
-Or run individual contract benchmarks:
+### Regression Detection
+
+Compare current results against baseline to detect performance regressions:
+
+```bash
+./scripts/compare_gas_results.sh benchmarks/baseline.json gas_results.json
+```
+
+The comparison fails if CPU or memory increases exceed configured thresholds (default 10%).
+
+### Update Baseline
+
+After verifying optimizations:
+
+```bash
+./scripts/update_baseline.sh
+```
+
+### Documentation
+
+- **[Benchmarking Guide](benchmarks/README.md)**: Complete benchmarking documentation
+- **[Gas Optimization Guide](docs/gas-optimization.md)**: Optimization strategies and best practices
+- **[Baseline Results](benchmarks/baseline.json)**: Current performance baseline
+- **[Threshold Configuration](benchmarks/thresholds.json)**: Regression detection thresholds
+
+### CI Integration
+
+Gas benchmarks run automatically in CI on every push and pull request. Results are:
+- Compared against baseline for regression detection
+- Uploaded as artifacts (retained for 30 days)
+- Posted as PR comments with comparison details
+
+To view CI results:
+1. Go to Actions tab in GitHub
+2. Select a workflow run
+3. Download the `gas-benchmarks` artifact
+4. View `gas_results.json` for metrics
+
+### Individual Contract Benchmarks
+
+Run benchmarks for a specific contract:
 
 ```bash
 RUST_TEST_THREADS=1 cargo test -p bill_payments --test gas_bench -- --nocapture
@@ -178,31 +218,6 @@ RUST_TEST_THREADS=1 cargo test -p insurance --test gas_bench -- --nocapture
 RUST_TEST_THREADS=1 cargo test -p family_wallet --test gas_bench -- --nocapture
 RUST_TEST_THREADS=1 cargo test -p remittance_split --test gas_bench -- --nocapture
 ```
-
-### Regression Detection
-
-Compare current results against a baseline:
-
-```bash
-# Save current results as baseline
-cp gas_results.json baseline.json
-
-# Make changes, then compare
-./scripts/run_gas_benchmarks.sh
-./scripts/compare_gas_results.sh baseline.json gas_results.json 10
-```
-
-The comparison script fails if CPU or memory increases by more than the threshold (default 10%).
-
-### CI Integration
-
-Gas benchmarks run automatically in CI on every push and pull request. Results are uploaded as artifacts and retained for 30 days.
-
-To view results:
-1. Go to Actions tab in GitHub
-2. Select a workflow run
-3. Download the `gas-benchmarks` artifact
-4. View `gas_results.json` for metrics
 
 ## Deployment
 
