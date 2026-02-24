@@ -1235,14 +1235,13 @@ mod test {
         let creation_time = 1_000_000u64;
         set_time(&env, creation_time);
 
-        let policy_id = client
-            .create_policy(
-                &owner,
-                &String::from_str(&env, "Test Policy"),
-                &String::from_str(&env, "Health"),
-                &100,
-                &10000,
-            );
+        let policy_id = client.create_policy(
+            &owner,
+            &String::from_str(&env, "Test Policy"),
+            &String::from_str(&env, "Health"),
+            &100,
+            &10000,
+        );
 
         let policy = client.get_policy(&policy_id).unwrap();
 
@@ -1270,14 +1269,13 @@ mod test {
         let t0 = 1_000_000u64;
         set_time(&env, t0);
 
-        let policy_id = client
-            .create_policy(
-                &owner,
-                &String::from_str(&env, "Test Policy"),
-                &String::from_str(&env, "Health"),
-                &100,
-                &10000,
-            );
+        let policy_id = client.create_policy(
+            &owner,
+            &String::from_str(&env, "Test Policy"),
+            &String::from_str(&env, "Health"),
+            &100,
+            &10000,
+        );
 
         let initial_policy = client.get_policy(&policy_id).unwrap();
         let initial_next_payment = initial_policy.next_payment_date;
@@ -1321,14 +1319,13 @@ mod test {
         let t0 = 1_000_000u64;
         set_time(&env, t0);
 
-        let policy_id = client
-            .create_policy(
-                &owner,
-                &String::from_str(&env, "Test Policy"),
-                &String::from_str(&env, "Health"),
-                &100,
-                &10000,
-            );
+        let policy_id = client.create_policy(
+            &owner,
+            &String::from_str(&env, "Test Policy"),
+            &String::from_str(&env, "Health"),
+            &100,
+            &10000,
+        );
 
         let policy_after_creation = client.get_policy(&policy_id).unwrap();
         assert_eq!(
@@ -1422,14 +1419,13 @@ mod test {
         let t0 = 1_000_000u64;
         set_time(&env, t0);
 
-        let policy_id = client
-            .create_policy(
-                &owner,
-                &String::from_str(&env, "Test Policy"),
-                &String::from_str(&env, "Health"),
-                &100,
-                &10000,
-            );
+        let policy_id = client.create_policy(
+            &owner,
+            &String::from_str(&env, "Test Policy"),
+            &String::from_str(&env, "Health"),
+            &100,
+            &10000,
+        );
 
         // Pay premium early (only 5 days after creation, before the 30-day due date)
         let t_early = t0 + (5 * 86400);
@@ -1460,14 +1456,13 @@ mod test {
         let t0 = 1_000_000u64;
         set_time(&env, t0);
 
-        let policy_id = client
-            .create_policy(
-                &owner,
-                &String::from_str(&env, "Test Policy"),
-                &String::from_str(&env, "Health"),
-                &100,
-                &10000,
-            );
+        let policy_id = client.create_policy(
+            &owner,
+            &String::from_str(&env, "Test Policy"),
+            &String::from_str(&env, "Health"),
+            &100,
+            &10000,
+        );
 
         let initial_policy = client.get_policy(&policy_id).unwrap();
         let initial_due = initial_policy.next_payment_date;
@@ -1507,27 +1502,25 @@ mod test {
         let t0 = 1_000_000u64;
         set_time(&env, t0);
 
-        let policy_id1 = client
-            .create_policy(
-                &owner,
-                &String::from_str(&env, "Policy 1"),
-                &String::from_str(&env, "Health"),
-                &100,
-                &10000,
-            );
+        let policy_id1 = client.create_policy(
+            &owner,
+            &String::from_str(&env, "Policy 1"),
+            &String::from_str(&env, "Health"),
+            &100,
+            &10000,
+        );
 
         // Create second policy at T1 (10 days later)
         let t1 = t0 + (10 * 86400);
         set_time(&env, t1);
 
-        let policy_id2 = client
-            .create_policy(
-                &owner,
-                &String::from_str(&env, "Policy 2"),
-                &String::from_str(&env, "Life"),
-                &200,
-                &20000,
-            );
+        let policy_id2 = client.create_policy(
+            &owner,
+            &String::from_str(&env, "Policy 2"),
+            &String::from_str(&env, "Life"),
+            &200,
+            &20000,
+        );
 
         let policy1 = client.get_policy(&policy_id1).unwrap();
         let policy2 = client.get_policy(&policy_id2).unwrap();
