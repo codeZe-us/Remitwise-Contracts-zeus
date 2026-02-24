@@ -581,7 +581,7 @@ impl Insurance {
             (policy_id, caller),
         );
 
-        true
+        Ok(true)
     }
 
     /// Extend the TTL of instance storage
