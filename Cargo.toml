@@ -17,6 +17,16 @@ members = [
     "scenarios",
     "integration_tests",
 ]
+default-members = [
+    "remittance_split",
+    "savings_goals",
+    "bill_payments",
+    "insurance",
+    "family_wallet",
+    "data_migration",
+    "reporting",
+    "orchestrator",
+]
 resolver = "2"
 
 [profile.release]
