@@ -32,6 +32,7 @@ cargo build --release --target wasm32-unknown-unknown
 
 - [Family Wallet Design (as implemented)](docs/family-wallet-design.md)
 - [Frontend Integration Notes](docs/frontend-integration.md)
+- [Storage Layout Reference](STORAGE_LAYOUT.md)
 
 ## Contracts
 

@@ -16,3 +16,4 @@ Makefile
 !docs/adr-admin-role.md
 !docs/family-wallet-design.md
 !docs/frontend-integration.md
+!STORAGE_LAYOUT.md
