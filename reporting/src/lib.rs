@@ -171,6 +171,18 @@ impl From<ReportingError> for soroban_sdk::Error {
     }
 }
 
+impl From<&ReportingError> for soroban_sdk::Error {
+    fn from(err: &ReportingError) -> Self {
+        (*err).into()
+    }
+}
+
+impl From<soroban_sdk::Error> for ReportingError {
+    fn from(_err: soroban_sdk::Error) -> Self {
+        ReportingError::Unauthorized
+    }
+}
+
 #[contracttype]
 #[derive(Clone)]
 pub enum ReportEvent {

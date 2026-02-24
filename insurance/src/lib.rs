@@ -140,6 +140,18 @@ impl From<InsuranceError> for soroban_sdk::Error {
     }
 }
 
+impl From<&InsuranceError> for soroban_sdk::Error {
+    fn from(err: &InsuranceError) -> Self {
+        (*err).into()
+    }
+}
+
+impl From<soroban_sdk::Error> for InsuranceError {
+    fn from(_err: soroban_sdk::Error) -> Self {
+        InsuranceError::Unauthorized
+    }
+}
+
 #[contracttype]
 #[derive(Clone)]
 pub enum InsuranceEvent {

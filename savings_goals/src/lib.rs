@@ -123,9 +123,21 @@ impl From<SavingsGoalsError> for soroban_sdk::Error {
             )),
             SavingsGoalsError::Overflow => soroban_sdk::Error::from((
                 soroban_sdk::xdr::ScErrorType::Contract,
-                soroban_sdk::xdr::ScErrorCode::ArithmeticOverflow,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
             )),
         }
+    }
+}
+
+impl From<&SavingsGoalsError> for soroban_sdk::Error {
+    fn from(err: &SavingsGoalsError) -> Self {
+        (*err).into()
+    }
+}
+
+impl From<soroban_sdk::Error> for SavingsGoalsError {
+    fn from(_err: soroban_sdk::Error) -> Self {
+        SavingsGoalsError::Unauthorized
     }
 }
 
