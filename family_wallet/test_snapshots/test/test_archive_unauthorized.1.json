@@ -163,6 +163,17 @@
                                     "val": {
                                       "u32": 1
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -195,6 +206,17 @@
                                     },
                                     "val": {
                                       "u32": 3
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
                                     }
                                   }
                                 ]
@@ -582,7 +604,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "caught panic 'Only Owner or Admin can archive transactions' from contract function 'Symbol(obj#59)'"
+                  "string": "caught panic 'Only Owner or Admin can archive transactions' from contract function 'Symbol(obj#63)'"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"

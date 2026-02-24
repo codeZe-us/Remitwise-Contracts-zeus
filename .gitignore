@@ -13,4 +13,4 @@ Makefile
 
 # Documentation files
 *.md
-
+!docs/adr-admin-role.md

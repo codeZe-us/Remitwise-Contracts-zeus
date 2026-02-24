@@ -163,6 +163,17 @@
                                     "val": {
                                       "u32": 1
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -195,6 +206,17 @@
                                     },
                                     "val": {
                                       "u32": 3
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
                                     }
                                   }
                                 ]
@@ -585,7 +607,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "caught panic 'Only Owner or Admin can add family members' from contract function 'Symbol(obj#61)'"
+                  "string": "caught panic 'Only Owner or Admin can add family members' from contract function 'Symbol(obj#65)'"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"

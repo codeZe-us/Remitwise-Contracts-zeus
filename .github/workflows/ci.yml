@@ -166,3 +166,43 @@ jobs:
         run: |
           cargo audit --deny warnings
         continue-on-error: true
+
+  gas-benchmarks:
+    name: Gas Benchmarks
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run gas benchmarks
+        run: |
+          ./scripts/run_gas_benchmarks.sh
+        continue-on-error: false
+
+      - name: Upload gas benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gas-benchmarks
+          path: gas_results.json
+          retention-days: 30

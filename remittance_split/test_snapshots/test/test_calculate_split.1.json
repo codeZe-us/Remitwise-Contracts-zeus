@@ -439,6 +439,7 @@
                 },
                 {
                   "key": {
+<<<<<<< test-for-calculate_split-rounding
                     "symbol": "initialized"
                   },
                   "val": {
@@ -447,6 +448,8 @@
                 },
                 {
                   "key": {
+=======
+>>>>>>> main
                     "symbol": "insurance_amount"
                   },
                   "val": {
