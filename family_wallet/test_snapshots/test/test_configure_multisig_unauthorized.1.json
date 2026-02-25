@@ -166,6 +166,17 @@
                                     "val": {
                                       "u32": 1
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -199,6 +210,17 @@
                                     "val": {
                                       "u32": 3
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -231,6 +253,17 @@
                                     },
                                     "val": {
                                       "u32": 3
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
                                     }
                                   }
                                 ]
@@ -640,7 +673,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "caught panic 'Only Owner or Admin can configure multi-sig' from contract function 'Symbol(obj#67)'"
+                  "string": "caught panic 'Only Owner or Admin can configure multi-sig' from contract function 'Symbol(obj#73)'"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"

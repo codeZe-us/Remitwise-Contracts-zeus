@@ -4,27 +4,36 @@ This guide covers the deployment of the Remitwise Contracts suite to the Stellar
 
 ## Prerequisites
 
-- Soroban CLI installed
+- Soroban CLI installed (version 21.0.0 or compatible)
 - Stellar account with sufficient XLM for deployment
 - Rust toolchain for contract compilation
 - Network access (Testnet or Mainnet)
 
+> **Note**: For detailed version compatibility information, see the [Compatibility section in README.md](README.md#compatibility) and the [Upgrade Guide](UPGRADE_GUIDE.md).
+
 ## Contracts Overview
 
-The Remitwise Contracts suite consists of four main contracts:
+The Remitwise Contracts suite consists of five main contracts:
 
 1. **Remittance Split** - Manages fund allocation percentages
 2. **Bill Payments** - Handles bill creation and payment tracking
 3. **Insurance** - Manages insurance policies and premiums
 4. **Savings Goals** - Tracks savings goals and fund management
+5. **Reporting** - Cross-contract aggregation and financial reporting
 
 ## Deployment Steps
 
 ### 1. Environment Setup
 
+> **Version Check**: Ensure you're using compatible versions. See [README Compatibility section](README.md#compatibility) for tested versions.
+
 ```bash
 # Install Soroban CLI (if not already installed)
-cargo install soroban-cli
+# Use version 21.0.0 or compatible
+cargo install --locked --version 21.0.0 soroban-cli
+
+# Verify installation
+soroban version
 
 # Configure network
 soroban config network add testnet \
@@ -50,6 +59,9 @@ cd ../remittance_split
 soroban contract build
 
 cd ../savings_goals
+soroban contract build
+
+cd ../reporting
 soroban contract build
 ```
 
@@ -114,6 +126,15 @@ SAVINGS_GOALS_ID=$(soroban contract deploy \
   --network testnet)
 
 echo "Savings Goals deployed: $SAVINGS_GOALS_ID"
+
+# Deploy Reporting contract (must be deployed last)
+cd ../reporting
+REPORTING_ID=$(soroban contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/reporting.wasm \
+  --source deployer \
+  --network testnet)
+
+echo "Reporting deployed: $REPORTING_ID"
 ```
 
 ### 4. Initialize Contracts
@@ -128,6 +149,35 @@ soroban contract invoke \
   --network testnet \
   -- \
   init
+```
+
+#### Initialize Reporting Contract
+
+```bash
+# Initialize with admin address
+ADMIN_ADDRESS="GA..."  # Your admin address
+
+soroban contract invoke \
+  --id $REPORTING_ID \
+  --source deployer \
+  --network testnet \
+  -- \
+  init \
+  --admin $ADMIN_ADDRESS
+
+# Configure contract addresses
+soroban contract invoke \
+  --id $REPORTING_ID \
+  --source deployer \
+  --network testnet \
+  -- \
+  configure_addresses \
+  --caller $ADMIN_ADDRESS \
+  --remittance_split $REMittance_SPLIT_ID \
+  --savings_goals $SAVINGS_GOALS_ID \
+  --bill_payments $BILL_PAYMENTS_ID \
+  --insurance $INSURANCE_ID \
+  --family_wallet "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # Family wallet address
 ```
 
 ### 5. Configuration
@@ -177,6 +227,7 @@ REMittance_SPLIT_ID=$REMittance_SPLIT_ID
 BILL_PAYMENTS_ID=$BILL_PAYMENTS_ID
 INSURANCE_ID=$INSURANCE_ID
 SAVINGS_GOALS_ID=$SAVINGS_GOALS_ID
+REPORTING_ID=$REPORTING_ID
 EOF
 ```
 
@@ -204,6 +255,23 @@ Create a complete user workflow:
 3. Create insurance policies
 4. Create bills
 5. Simulate remittance processing
+6. Generate financial health report
+
+```bash
+# Generate a comprehensive financial health report
+USER_ADDRESS="GA..."
+
+soroban contract invoke \
+  --id $REPORTING_ID \
+  --source deployer \
+  --network testnet \
+  -- \
+  get_financial_health_report \
+  --user $USER_ADDRESS \
+  --total_remittance 10000000000 \
+  --period_start 1704067200 \
+  --period_end 1706745600
+```
 
 ## Troubleshooting
 
@@ -274,11 +342,17 @@ Approximate deployment costs (Testnet):
 
 ### Upgrading Contracts
 
-1. Deploy new contract version
-2. Migrate data if needed
-3. Update client applications
-4. Test thoroughly
-5. Decommission old contract
+When upgrading to a new Soroban version:
+
+1. Review the [Upgrade Guide](UPGRADE_GUIDE.md) for detailed instructions
+2. Test on testnet with new SDK version
+3. Deploy new contract version
+4. Migrate data if needed (see [data_migration contract](data_migration/))
+5. Update client applications
+6. Test thoroughly before mainnet deployment
+7. Decommission old contract
+
+For breaking changes and version-specific migration steps, see [UPGRADE_GUIDE.md](UPGRADE_GUIDE.md#version-specific-migration-guides).
 
 ### Monitoring
 
@@ -286,3 +360,7 @@ Approximate deployment costs (Testnet):
 - Track function call volumes
 - Set up alerts for failures
 - Regular backup of contract states
+
+### Off-chain reconciliation
+
+To keep off-chain systems (databases, reporting, Anchor webhooks) aligned with on-chain state, follow the [Off-Chain Reconciliation Process](docs/off-chain-reconciliation.md). It covers data sources (events, webhooks, off-chain DB), a reconciliation checklist, and example flows for event-driven ingestion and periodic reconciliation.

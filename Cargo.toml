@@ -1,3 +1,9 @@
+[package]
+name = "remitwise-contracts"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
 [workspace]
 members = [
     "remittance_split",
@@ -5,6 +11,9 @@ members = [
     "bill_payments",
     "insurance",
     "family_wallet",
+    "data_migration",
+    "reporting",
+    "orchestrator",
 ]
 resolver = "2"
 
@@ -21,4 +30,3 @@ lto = true
 [profile.release-with-logs]
 inherits = "release"
 debug-assertions = true
-
