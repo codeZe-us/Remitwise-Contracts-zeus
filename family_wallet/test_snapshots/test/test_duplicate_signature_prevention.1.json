@@ -368,6 +368,17 @@
                                     "val": {
                                       "u32": 1
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -401,6 +412,17 @@
                                     "val": {
                                       "u32": 3
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -433,6 +455,17 @@
                                     },
                                     "val": {
                                       "u32": 3
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
                                     }
                                   }
                                 ]
@@ -1647,7 +1680,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "caught panic 'Already signed this transaction' from contract function 'Symbol(obj#497)'"
+                  "string": "caught panic 'Already signed this transaction' from contract function 'Symbol(obj#521)'"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"

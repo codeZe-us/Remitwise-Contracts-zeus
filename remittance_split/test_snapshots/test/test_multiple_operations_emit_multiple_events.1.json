@@ -440,14 +440,6 @@
                 },
                 {
                   "key": {
-                    "symbol": "initialized"
-                  },
-                  "val": {
-                    "bool": true
-                  }
-                },
-                {
-                  "key": {
                     "symbol": "insurance_amount"
                   },
                   "val": {
@@ -635,14 +627,6 @@
                       "hi": 0,
                       "lo": 450
                     }
-                  }
-                },
-                {
-                  "key": {
-                    "symbol": "initialized"
-                  },
-                  "val": {
-                    "bool": true
                   }
                 },
                 {

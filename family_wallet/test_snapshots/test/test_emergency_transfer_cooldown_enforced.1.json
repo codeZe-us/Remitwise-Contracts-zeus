@@ -375,6 +375,17 @@
                                     "val": {
                                       "u32": 1
                                     }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "spending_limit"
+                                    },
+                                    "val": {
+                                      "i128": {
+                                        "hi": 0,
+                                        "lo": 0
+                                      }
+                                    }
                                   }
                                 ]
                               }
@@ -1805,7 +1816,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "caught panic 'Emergency transfer cooldown period not elapsed' from contract function 'Symbol(obj#483)'"
+                  "string": "caught panic 'Emergency transfer cooldown period not elapsed' from contract function 'Symbol(obj#491)'"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"

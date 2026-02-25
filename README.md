@@ -159,7 +159,17 @@ cargo test
 
 See `docs/gas-optimization.md` for methodology, before/after results, and assumptions.
 
-Run the deterministic gas benchmarks:
+### Running Locally
+
+Run all benchmarks and generate a JSON report:
+
+```bash
+./scripts/run_gas_benchmarks.sh
+```
+
+This creates `gas_results.json` with CPU and memory costs for all contract operations.
+
+Or run individual contract benchmarks:
 
 ```bash
 RUST_TEST_THREADS=1 cargo test -p bill_payments --test gas_bench -- --nocapture
@@ -168,6 +178,31 @@ RUST_TEST_THREADS=1 cargo test -p insurance --test gas_bench -- --nocapture
 RUST_TEST_THREADS=1 cargo test -p family_wallet --test gas_bench -- --nocapture
 RUST_TEST_THREADS=1 cargo test -p remittance_split --test gas_bench -- --nocapture
 ```
+
+### Regression Detection
+
+Compare current results against a baseline:
+
+```bash
+# Save current results as baseline
+cp gas_results.json baseline.json
+
+# Make changes, then compare
+./scripts/run_gas_benchmarks.sh
+./scripts/compare_gas_results.sh baseline.json gas_results.json 10
+```
+
+The comparison script fails if CPU or memory increases by more than the threshold (default 10%).
+
+### CI Integration
+
+Gas benchmarks run automatically in CI on every push and pull request. Results are uploaded as artifacts and retained for 30 days.
+
+To view results:
+1. Go to Actions tab in GitHub
+2. Select a workflow run
+3. Download the `gas-benchmarks` artifact
+4. View `gas_results.json` for metrics
 
 ## Deployment
 

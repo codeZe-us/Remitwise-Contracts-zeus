@@ -192,7 +192,7 @@ pub trait BillPaymentsTrait {
 
 #[contractclient(name = "InsuranceClient")]
 pub trait InsuranceTrait {
-    fn get_active_policies(env: Env, owner: Address) -> Vec<InsurancePolicy>;
+    fn get_active_policies(env: Env, owner: Address, cursor: u32, limit: u32) -> PolicyPage;
     fn get_total_monthly_premium(env: Env, owner: Address) -> i128;
 }
 
@@ -236,6 +236,15 @@ pub struct InsurancePolicy {
     pub coverage_amount: i128,
     pub active: bool,
     pub next_payment_date: u64,
+    pub schedule_id: Option<u32>,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct PolicyPage {
+    pub items: Vec<InsurancePolicy>,
+    pub next_cursor: u32,
+    pub count: u32,
 }
 
 #[contract]
@@ -478,7 +487,8 @@ impl ReportingContract {
             .expect("Contract addresses not configured");
 
         let insurance_client = InsuranceClient::new(&env, &addresses.insurance);
-        let policies = insurance_client.get_active_policies(&user);
+        let policy_page = insurance_client.get_active_policies(&user, &0, &50);
+        let policies = policy_page.items;
         let monthly_premium = insurance_client.get_total_monthly_premium(&user);
 
         let mut total_coverage = 0i128;
@@ -553,8 +563,8 @@ impl ReportingContract {
 
         // Insurance score (0-20 points)
         let insurance_client = InsuranceClient::new(&env, &addresses.insurance);
-        let policies = insurance_client.get_active_policies(&user);
-        let insurance_score = if !policies.is_empty() { 20 } else { 0 };
+        let policy_page = insurance_client.get_active_policies(&user, &0, &1);
+        let insurance_score = if !policy_page.items.is_empty() { 20 } else { 0 };
 
         let total_score = savings_score + bills_score + insurance_score;
 
