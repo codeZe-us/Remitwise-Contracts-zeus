@@ -38,7 +38,7 @@ fn test_initialize_split() {
         &5,  // insurance
     );
 
-    assert_eq!(success, true);
+    assert!(success);
 
     let config = client.get_config().unwrap();
     assert_eq!(config.owner, owner);
@@ -95,7 +95,7 @@ fn test_update_split() {
     client.initialize_split(&owner, &0, &50, &30, &15, &5);
 
     let success = client.update_split(&owner, &1, &40, &40, &10, &10);
-    assert_eq!(success, true);
+    assert!(success);
 
     let config = client.get_config().unwrap();
     assert_eq!(config.spending_percent, 40);
