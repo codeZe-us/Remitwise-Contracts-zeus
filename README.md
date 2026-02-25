@@ -314,6 +314,8 @@ Bill and insurance events include `external_ref` where applicable for off-chain 
 - `PolicyDeactivatedEvent`: Emitted when a policy is deactivated
   - `policy_id`, `name`, `timestamp`
 
+Bill and insurance events include `external_ref` where applicable for off-chain linking.
+
 ### Family Wallet
 
 Manages family roles, spending controls, multisig approvals, and emergency transfer policies.
@@ -460,14 +462,9 @@ soroban contract deploy \
   --network testnet
 ```
 
-## Documentation
+## Operational Limits
 
-- [README.md](README.md) - Main documentation and getting started
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and design
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide for testnet and mainnet
-- [UPGRADE_GUIDE.md](UPGRADE_GUIDE.md) - Detailed Soroban version upgrade procedures
-- [VERSION_COMPATIBILITY.md](VERSION_COMPATIBILITY.md) - Version compatibility matrix and testing status
-- [docs/adr-admin-role.md](docs/adr-admin-role.md) - Architecture decision records
+ID and record-count operating limits (including `u32` overflow analysis and monitoring alerts) are documented in the **Operational Limits and Monitoring** section of [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Development
 
