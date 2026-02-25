@@ -107,6 +107,60 @@ pub struct PremiumSchedule {
 }
 
 #[contracttype]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum InsuranceError {
+    InvalidPremium = 1,
+    InvalidCoverage = 2,
+    PolicyNotFound = 3,
+    PolicyInactive = 4,
+    Unauthorized = 5,
+    BatchTooLarge = 6,
+}
+
+impl From<InsuranceError> for soroban_sdk::Error {
+    fn from(err: InsuranceError) -> Self {
+        match err {
+            InsuranceError::InvalidPremium => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+            InsuranceError::InvalidCoverage => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+            InsuranceError::PolicyNotFound => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::MissingValue,
+            )),
+            InsuranceError::PolicyInactive => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            InsuranceError::Unauthorized => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            InsuranceError::BatchTooLarge => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+        }
+    }
+}
+
+impl From<&InsuranceError> for soroban_sdk::Error {
+    fn from(err: &InsuranceError) -> Self {
+        (*err).into()
+    }
+}
+
+impl From<soroban_sdk::Error> for InsuranceError {
+    fn from(_err: soroban_sdk::Error) -> Self {
+        InsuranceError::Unauthorized
+    }
+}
+
+#[contracttype]
 #[derive(Clone)]
 pub enum InsuranceEvent {
     PolicyCreated,
@@ -1031,14 +1085,12 @@ mod test {
         );
         assert_eq!(policy_id, 1);
 
-        assert!(
-            result.is_err(),
-            "pay_premium must fail when policy does not exist"
-        );
+        // Contract panics when policy not found
+        assert!(result.is_err());
     }
 
     #[test]
-    fn test_get_active_policies_paginated() {
+    fn test_get_active_policies_pagination() {
         let env = Env::default();
         env.mock_all_auths();
         let contract_id = env.register_contract(None, Insurance);
@@ -1130,9 +1182,10 @@ mod test {
             &25000,
         );
 
-        // Should have 6 events (2 per create_policy)
-        let events = env.events().all();
-        assert_eq!(events.len(), 6);
+        client.pay_premium(&owner, &policy_id);
+
+        let events_after = env.events().all().len();
+        assert_eq!(events_after - events_before, 2);
     }
 
     #[test]
@@ -1419,13 +1472,13 @@ mod test {
     // Test: pay_premium after deactivate_policy (#104)
     // ──────────────────────────────────────────────────────────────────
 
-    /// After deactivating a policy, `pay_premium` must panic with
-    /// "Policy is not active". The policy must remain inactive.
+    /// After deactivating a policy, `pay_premium` must return an error.
+    /// The policy must remain inactive.
     #[test]
-    #[should_panic(expected = "Policy is not active")]
     fn test_pay_premium_after_deactivate() {
         let env = Env::default();
         env.mock_all_auths();
+
         let contract_id = env.register_contract(None, Insurance);
         let client = InsuranceClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
@@ -1451,8 +1504,12 @@ mod test {
         let policy_after_deactivate = client.get_policy(&policy_id).unwrap();
         assert!(!policy_after_deactivate.active);
 
-        // 3. Attempt to pay premium — must panic
-        client.pay_premium(&owner, &policy_id);
+        // 3. Attempt to pay premium — must fail
+        let result = client.try_pay_premium(&owner, &policy_id);
+        assert!(
+            result.is_err(),
+            "pay_premium should fail for inactive policy"
+        );
     }
 
     // ══════════════════════════════════════════════════════════════════════

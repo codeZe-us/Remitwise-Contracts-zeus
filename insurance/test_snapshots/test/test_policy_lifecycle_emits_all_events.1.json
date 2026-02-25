@@ -700,9 +700,7 @@
                 "symbol": "pay_premium"
               }
             ],
-            "data": {
-              "bool": true
-            }
+            "data": "void"
           }
         }
       },
