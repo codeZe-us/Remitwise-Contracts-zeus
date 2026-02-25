@@ -58,6 +58,12 @@ const INSTANCE_LIFETIME_THRESHOLD: u32 = 17280; // ~1 day
 const INSTANCE_BUMP_AMOUNT: u32 = 518400; // ~30 days
 
 const CONTRACT_VERSION: u32 = 1;
+const MAX_BATCH_SIZE: u32 = 50;
+const STORAGE_PREMIUM_TOTALS: Symbol = symbol_short!("PRM_TOT");
+
+/// Pagination constants
+pub const DEFAULT_PAGE_LIMIT: u32 = 20;
+pub const MAX_PAGE_LIMIT: u32 = 50;
 
 pub mod pause_functions {
     use soroban_sdk::{symbol_short, Symbol};
@@ -101,6 +107,60 @@ pub struct PremiumSchedule {
 }
 
 /// Events emitted by the contract for audit trail
+#[contracttype]
+#[derive(Clone, Copy)]
+pub enum InsuranceError {
+    InvalidPremium = 1,
+    InvalidCoverage = 2,
+    PolicyNotFound = 3,
+    PolicyInactive = 4,
+    Unauthorized = 5,
+    BatchTooLarge = 6,
+}
+
+impl From<InsuranceError> for soroban_sdk::Error {
+    fn from(err: InsuranceError) -> Self {
+        match err {
+            InsuranceError::InvalidPremium => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+            InsuranceError::InvalidCoverage => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+            InsuranceError::PolicyNotFound => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::MissingValue,
+            )),
+            InsuranceError::PolicyInactive => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            InsuranceError::Unauthorized => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            InsuranceError::BatchTooLarge => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+        }
+    }
+}
+
+impl From<&InsuranceError> for soroban_sdk::Error {
+    fn from(err: &InsuranceError) -> Self {
+        (*err).into()
+    }
+}
+
+impl From<soroban_sdk::Error> for InsuranceError {
+    fn from(_err: soroban_sdk::Error) -> Self {
+        InsuranceError::Unauthorized
+    }
+}
+
 #[contracttype]
 #[derive(Clone)]
 pub enum InsuranceEvent {
@@ -297,22 +357,29 @@ impl Insurance {
         Ok(())
     }
 
-    /// Create a new insurance policy
+    // -----------------------------------------------------------------------
+    // Core policy operations (unchanged)
+    // -----------------------------------------------------------------------
+
+    /// Creates a new insurance policy for the owner.
     ///
     /// # Arguments
     /// * `owner` - Address of the policy owner (must authorize)
-    /// * `name` - Name of the policy
-    /// * `coverage_type` - Type of coverage (e.g., "health", "emergency")
-    /// * `monthly_premium` - Monthly premium amount (must be positive)
-    /// * `coverage_amount` - Total coverage amount (must be positive)
+    /// * `name` - Policy name (e.g., "Life Insurance")
+    /// * `coverage_type` - Type of coverage (e.g., "Term", "Whole")
+    /// * `monthly_premium` - Monthly premium amount in stroops (must be > 0)
+    /// * `coverage_amount` - Total coverage amount in stroops (must be > 0)
     ///
     /// # Returns
-    /// The ID of the created policy
+    /// `Ok(policy_id)` - The newly created policy ID
+    ///
+    /// # Errors
+    /// * `InvalidPremium` - If monthly_premium ≤ 0
+    /// * `InvalidCoverage` - If coverage_amount ≤ 0
     ///
     /// # Panics
-    /// - If owner doesn't authorize the transaction
-    /// - If monthly_premium is not positive
-    /// - If coverage_amount is not positive
+    /// * If `owner` does not authorize the transaction (implicit via `require_auth()`)
+    /// * If the contract is globally or function-specifically paused
     pub fn create_policy(
         env: Env,
         owner: Address,
@@ -324,8 +391,11 @@ impl Insurance {
         owner.require_auth();
         Self::require_not_paused(&env, pause_functions::CREATE_POLICY)?;
 
-        if monthly_premium <= 0 || coverage_amount <= 0 {
-            return Err(InsuranceError::InvalidAmount);
+        if monthly_premium <= 0 {
+            return Err(InsuranceError::InvalidPremium);
+        }
+        if coverage_amount <= 0 {
+            return Err(InsuranceError::InvalidCoverage);
         }
 
         Self::extend_instance_ttl(&env);
@@ -364,6 +434,7 @@ impl Insurance {
         env.storage()
             .instance()
             .set(&symbol_short!("NEXT_ID"), &next_id);
+        Self::adjust_active_premium_total(&env, &owner, monthly_premium);
 
         env.events().publish(
             (POLICY_CREATED,),
@@ -385,20 +456,23 @@ impl Insurance {
         Ok(next_id)
     }
 
-    /// Pay monthly premium for a policy
+    /// Pays a premium for a specific policy.
     ///
     /// # Arguments
-    /// * `caller` - Address of the caller (must be the policy owner)
-    /// * `policy_id` - ID of the policy
+    /// * `caller` - Address of the policy owner (must authorize)
+    /// * `policy_id` - ID of the policy to pay premium for
     ///
     /// # Returns
-    /// True if payment was successful
+    /// `Ok(())` on successful premium payment
+    ///
+    /// # Errors
+    /// * `PolicyNotFound` - If policy_id does not exist
+    /// * `Unauthorized` - If caller is not the policy owner
+    /// * `PolicyInactive` - If the policy is not active
     ///
     /// # Panics
-    /// - If caller is not the policy owner
-    /// - If policy is not found
-    /// - If policy is not active
-    pub fn pay_premium(env: Env, caller: Address, policy_id: u32) -> Result<bool, InsuranceError> {
+    /// * If `caller` does not authorize the transaction
+    pub fn pay_premium(env: Env, caller: Address, policy_id: u32) -> Result<(), InsuranceError> {
         caller.require_auth();
         Self::require_not_paused(&env, pause_functions::PAY_PREMIUM)?;
         Self::extend_instance_ttl(&env);
@@ -409,9 +483,10 @@ impl Insurance {
             .get(&symbol_short!("POLICIES"))
             .unwrap_or_else(|| Map::new(&env));
 
-        let mut policy = policies
-            .get(policy_id)
-            .ok_or(InsuranceError::PolicyNotFound)?;
+        let mut policy = match policies.get(policy_id) {
+            Some(p) => p,
+            None => return Err(InsuranceError::PolicyNotFound),
+        };
 
         if policy.owner != caller {
             return Err(InsuranceError::Unauthorized);
@@ -442,26 +517,64 @@ impl Insurance {
             (policy_id, caller),
         );
 
-        Ok(true)
+        Ok(())
     }
 
-    /// Batch pay premiums for multiple policies (atomic). Caller must be owner of all.
     pub fn batch_pay_premiums(
         env: Env,
         caller: Address,
         policy_ids: Vec<u32>,
     ) -> Result<u32, InsuranceError> {
         caller.require_auth();
-        if policy_ids.len() > 20 {
+        Self::require_not_paused(&env, pause_functions::PAY_PREMIUM);
+        if policy_ids.len() > MAX_BATCH_SIZE {
             return Err(InsuranceError::BatchTooLarge);
+        }
+        let policies_map: Map<u32, InsurancePolicy> = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("POLICIES"))
+            .unwrap_or_else(|| Map::new(&env));
+        for id in policy_ids.iter() {
+            let policy = match policies_map.get(id) {
+                Some(p) => p,
+                None => return Err(InsuranceError::PolicyNotFound),
+            };
+            if policy.owner != caller {
+                return Err(InsuranceError::Unauthorized);
+            }
+            if !policy.active {
+                return Err(InsuranceError::PolicyInactive);
+            }
         }
 
         let mut count = 0;
         for id in policy_ids.iter() {
-            Self::pay_premium(env.clone(), caller.clone(), id)?;
-            count += 1;
+            let mut policy = policies.get(id).unwrap();
+            policy.next_payment_date = current_time + (30 * 86400);
+            let event = PremiumPaidEvent {
+                policy_id: id,
+                name: policy.name.clone(),
+                amount: policy.monthly_premium,
+                next_payment_date: policy.next_payment_date,
+                timestamp: current_time,
+            };
+            env.events().publish((PREMIUM_PAID,), event);
+            env.events().publish(
+                (symbol_short!("insure"), InsuranceEvent::PremiumPaid),
+                (id, caller.clone()),
+            );
+            policies.set(id, policy);
+            paid_count += 1;
         }
-        Ok(count)
+        env.storage()
+            .instance()
+            .set(&symbol_short!("POLICIES"), &policies);
+        env.events().publish(
+            (symbol_short!("insure"), symbol_short!("batch_pay")),
+            (paid_count, caller),
+        );
+        Ok(paid_count)
     }
 
     /// Get a policy by ID
@@ -512,6 +625,12 @@ impl Insurance {
     /// # Returns
     /// Total monthly premium amount for the owner's active policies
     pub fn get_total_monthly_premium(env: Env, owner: Address) -> i128 {
+        if let Some(totals) = Self::get_active_premium_totals_map(&env) {
+            if let Some(total) = totals.get(owner.clone()) {
+                return total;
+            }
+        }
+
         let mut total = 0i128;
         let policies: Map<u32, InsurancePolicy> = env
             .storage()
@@ -561,12 +680,23 @@ impl Insurance {
             return Err(InsuranceError::Unauthorized);
         }
 
+        let was_active = policy.active;
         policy.active = false;
+        let premium_amount = policy.monthly_premium;
         policies.set(policy_id, policy.clone());
         env.storage()
             .instance()
             .set(&symbol_short!("POLICIES"), &policies);
 
+        if was_active {
+            Self::adjust_active_premium_total(&env, &caller, -premium_amount);
+        }
+        let event = PolicyDeactivatedEvent {
+            policy_id,
+            name: policy.name.clone(),
+            timestamp: env.ledger().timestamp(),
+        };
+        env.events().publish((POLICY_DEACTIVATED,), event);
         env.events().publish(
             (POLICY_DEACTIVATED,),
             PolicyDeactivatedEvent {
@@ -591,7 +721,34 @@ impl Insurance {
             .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
     }
 
-    /// Create a schedule for automatic premium payments
+    fn get_active_premium_totals_map(env: &Env) -> Option<Map<Address, i128>> {
+        env.storage().instance().get(&STORAGE_PREMIUM_TOTALS)
+    }
+
+    fn adjust_active_premium_total(env: &Env, owner: &Address, delta: i128) {
+        if delta == 0 {
+            return;
+        }
+        let mut totals: Map<Address, i128> = env
+            .storage()
+            .instance()
+            .get(&STORAGE_PREMIUM_TOTALS)
+            .unwrap_or_else(|| Map::new(env));
+        let current = totals.get(owner.clone()).unwrap_or(0);
+        let next = if delta >= 0 {
+            current.saturating_add(delta)
+        } else {
+            current.saturating_sub(delta.saturating_abs())
+        };
+        totals.set(owner.clone(), next);
+        env.storage()
+            .instance()
+            .set(&STORAGE_PREMIUM_TOTALS, &totals);
+    }
+
+    // -----------------------------------------------------------------------
+    // Schedule operations (unchanged)
+    // -----------------------------------------------------------------------
     pub fn create_premium_schedule(
         env: Env,
         owner: Address,
