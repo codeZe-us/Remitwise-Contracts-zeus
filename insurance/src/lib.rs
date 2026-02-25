@@ -106,61 +106,6 @@ pub struct PremiumSchedule {
     pub missed_count: u32,
 }
 
-/// Events emitted by the contract for audit trail
-#[contracttype]
-#[derive(Clone, Copy)]
-pub enum InsuranceError {
-    InvalidPremium = 1,
-    InvalidCoverage = 2,
-    PolicyNotFound = 3,
-    PolicyInactive = 4,
-    Unauthorized = 5,
-    BatchTooLarge = 6,
-}
-
-impl From<InsuranceError> for soroban_sdk::Error {
-    fn from(err: InsuranceError) -> Self {
-        match err {
-            InsuranceError::InvalidPremium => soroban_sdk::Error::from((
-                soroban_sdk::xdr::ScErrorType::Contract,
-                soroban_sdk::xdr::ScErrorCode::InvalidInput,
-            )),
-            InsuranceError::InvalidCoverage => soroban_sdk::Error::from((
-                soroban_sdk::xdr::ScErrorType::Contract,
-                soroban_sdk::xdr::ScErrorCode::InvalidInput,
-            )),
-            InsuranceError::PolicyNotFound => soroban_sdk::Error::from((
-                soroban_sdk::xdr::ScErrorType::Contract,
-                soroban_sdk::xdr::ScErrorCode::MissingValue,
-            )),
-            InsuranceError::PolicyInactive => soroban_sdk::Error::from((
-                soroban_sdk::xdr::ScErrorType::Contract,
-                soroban_sdk::xdr::ScErrorCode::InvalidAction,
-            )),
-            InsuranceError::Unauthorized => soroban_sdk::Error::from((
-                soroban_sdk::xdr::ScErrorType::Contract,
-                soroban_sdk::xdr::ScErrorCode::InvalidAction,
-            )),
-            InsuranceError::BatchTooLarge => soroban_sdk::Error::from((
-                soroban_sdk::xdr::ScErrorType::Contract,
-                soroban_sdk::xdr::ScErrorCode::InvalidInput,
-            )),
-        }
-    }
-}
-
-impl From<&InsuranceError> for soroban_sdk::Error {
-    fn from(err: &InsuranceError) -> Self {
-        (*err).into()
-    }
-}
-
-impl From<soroban_sdk::Error> for InsuranceError {
-    fn from(_err: soroban_sdk::Error) -> Self {
-        InsuranceError::Unauthorized
-    }
-}
-
 #[contracttype]
 #[derive(Clone)]
 pub enum InsuranceEvent {
@@ -374,8 +319,7 @@ impl Insurance {
     /// `Ok(policy_id)` - The newly created policy ID
     ///
     /// # Errors
-    /// * `InvalidPremium` - If monthly_premium ≤ 0
-    /// * `InvalidCoverage` - If coverage_amount ≤ 0
+    /// * `InvalidAmount` - If monthly_premium ≤ 0 or coverage_amount ≤ 0
     ///
     /// # Panics
     /// * If `owner` does not authorize the transaction (implicit via `require_auth()`)
@@ -391,11 +335,8 @@ impl Insurance {
         owner.require_auth();
         Self::require_not_paused(&env, pause_functions::CREATE_POLICY)?;
 
-        if monthly_premium <= 0 {
-            return Err(InsuranceError::InvalidPremium);
-        }
-        if coverage_amount <= 0 {
-            return Err(InsuranceError::InvalidCoverage);
+        if monthly_premium <= 0 || coverage_amount <= 0 {
+            return Err(InsuranceError::InvalidAmount);
         }
 
         Self::extend_instance_ttl(&env);
@@ -526,11 +467,11 @@ impl Insurance {
         policy_ids: Vec<u32>,
     ) -> Result<u32, InsuranceError> {
         caller.require_auth();
-        Self::require_not_paused(&env, pause_functions::PAY_PREMIUM);
+        Self::require_not_paused(&env, pause_functions::PAY_PREMIUM)?;
         if policy_ids.len() > MAX_BATCH_SIZE {
             return Err(InsuranceError::BatchTooLarge);
         }
-        let policies_map: Map<u32, InsurancePolicy> = env
+        let mut policies_map: Map<u32, InsurancePolicy> = env
             .storage()
             .instance()
             .get(&symbol_short!("POLICIES"))
@@ -548,9 +489,10 @@ impl Insurance {
             }
         }
 
-        let mut count = 0;
+        let current_time = env.ledger().timestamp();
+        let mut paid_count = 0;
         for id in policy_ids.iter() {
-            let mut policy = policies.get(id).unwrap();
+            let mut policy = policies_map.get(id).unwrap();
             policy.next_payment_date = current_time + (30 * 86400);
             let event = PremiumPaidEvent {
                 policy_id: id,
@@ -564,12 +506,12 @@ impl Insurance {
                 (symbol_short!("insure"), InsuranceEvent::PremiumPaid),
                 (id, caller.clone()),
             );
-            policies.set(id, policy);
+            policies_map.set(id, policy);
             paid_count += 1;
         }
         env.storage()
             .instance()
-            .set(&symbol_short!("POLICIES"), &policies);
+            .set(&symbol_short!("POLICIES"), &policies_map);
         env.events().publish(
             (symbol_short!("insure"), symbol_short!("batch_pay")),
             (paid_count, caller),
