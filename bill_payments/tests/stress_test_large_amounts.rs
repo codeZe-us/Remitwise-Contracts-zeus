@@ -1,7 +1,7 @@
-#![cfg(test)]
+﻿#![cfg(test)]
 
 //! Stress tests for arithmetic operations with very large i128 values
-//! 
+//!
 //! These tests verify that the bill_payments contract handles extreme values correctly:
 //! - Values near i128::MAX/2 to avoid overflow in additions
 //! - Proper error handling for overflow conditions
@@ -41,7 +41,7 @@ fn test_create_bill_near_max_i128() {
 
     // Test with i128::MAX / 2 - a very large but safe value
     let large_amount = i128::MAX / 2;
-    
+
     let bill_id = client.create_bill(
         &owner,
         &String::from_str(&env, "Large Bill"),
@@ -66,7 +66,7 @@ fn test_pay_bill_with_large_amount() {
     env.mock_all_auths();
 
     let large_amount = i128::MAX / 2;
-    
+
     let bill_id = client.create_bill(
         &owner,
         &String::from_str(&env, "Large Bill"),
@@ -94,7 +94,7 @@ fn test_recurring_bill_with_large_amount() {
     env.mock_all_auths();
 
     let large_amount = i128::MAX / 2;
-    
+
     let bill_id = client.create_bill(
         &owner,
         &String::from_str(&env, "Large Recurring"),
@@ -129,7 +129,7 @@ fn test_get_total_unpaid_with_two_large_bills() {
 
     // Create two bills, each at i128::MAX / 4 to safely add them
     let amount = i128::MAX / 4;
-    
+
     client.create_bill(
         &owner,
         &String::from_str(&env, "Bill1"),
@@ -138,7 +138,7 @@ fn test_get_total_unpaid_with_two_large_bills() {
         &false,
         &0,
     );
-    
+
     env.mock_all_auths();
     client.create_bill(
         &owner,
@@ -165,7 +165,7 @@ fn test_get_total_unpaid_overflow_panics() {
 
     // Create two bills that will overflow when added
     let amount = i128::MAX / 2 + 1000;
-    
+
     client.create_bill(
         &owner,
         &String::from_str(&env, "Bill1"),
@@ -174,7 +174,7 @@ fn test_get_total_unpaid_overflow_panics() {
         &false,
         &0,
     );
-    
+
     env.mock_all_auths();
     client.create_bill(
         &owner,
@@ -200,7 +200,7 @@ fn test_multiple_large_bills_different_owners() {
     env.mock_all_auths();
 
     let large_amount = i128::MAX / 2;
-    
+
     // Each owner can have large bills independently
     client.create_bill(
         &owner1,
@@ -210,7 +210,7 @@ fn test_multiple_large_bills_different_owners() {
         &false,
         &0,
     );
-    
+
     env.mock_all_auths();
     client.create_bill(
         &owner2,
@@ -223,7 +223,7 @@ fn test_multiple_large_bills_different_owners() {
 
     let total1 = client.get_total_unpaid(&owner1);
     let total2 = client.get_total_unpaid(&owner2);
-    
+
     assert_eq!(total1, large_amount);
     assert_eq!(total2, large_amount);
 }
@@ -232,7 +232,7 @@ fn test_multiple_large_bills_different_owners() {
 fn test_archive_large_amount_bill() {
     let env = Env::default();
     set_time(&env, 1000000);
-    
+
     let contract_id = env.register_contract(None, BillPayments);
     let client = BillPaymentsClient::new(&env, &contract_id);
     let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
@@ -240,7 +240,7 @@ fn test_archive_large_amount_bill() {
     env.mock_all_auths();
 
     let large_amount = i128::MAX / 2;
-    
+
     let bill_id = client.create_bill(
         &owner,
         &String::from_str(&env, "Large Bill"),
@@ -270,9 +270,9 @@ fn test_batch_pay_large_bills() {
     env.mock_all_auths();
 
     let amount = i128::MAX / 10; // Safe for multiple bills
-    
+
     let mut bill_ids = soroban_sdk::Vec::new(&env);
-    
+
     for i in 0..5 {
         let bill_id = client.create_bill(
             &owner,
@@ -288,9 +288,9 @@ fn test_batch_pay_large_bills() {
 
     env.mock_all_auths();
     let paid_count = client.batch_pay_bills(&owner, &bill_ids);
-    
+
     assert_eq!(paid_count, 5);
-    
+
     // Verify all bills are paid
     for bill_id in bill_ids.iter() {
         let bill = client.get_bill(&bill_id).unwrap();
@@ -303,7 +303,7 @@ fn test_batch_pay_large_bills() {
 fn test_overdue_bills_with_large_amounts() {
     let env = Env::default();
     set_time(&env, 2_000_000);
-    
+
     let contract_id = env.register_contract(None, BillPayments);
     let client = BillPaymentsClient::new(&env, &contract_id);
     let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
@@ -311,7 +311,7 @@ fn test_overdue_bills_with_large_amounts() {
     env.mock_all_auths();
 
     let large_amount = i128::MAX / 2;
-    
+
     client.create_bill(
         &owner,
         &String::from_str(&env, "Overdue Large"),
@@ -337,7 +337,7 @@ fn test_edge_case_i128_max_minus_one() {
 
     // Test with i128::MAX - 1
     let edge_amount = i128::MAX - 1;
-    
+
     let bill_id = client.create_bill(
         &owner,
         &String::from_str(&env, "Edge Case"),
@@ -361,7 +361,7 @@ fn test_pagination_with_large_amounts() {
     env.mock_all_auths();
 
     let large_amount = i128::MAX / 100;
-    
+
     // Create multiple bills with large amounts
     for i in 0..15 {
         client.create_bill(
@@ -379,10 +379,10 @@ fn test_pagination_with_large_amounts() {
     let page1 = client.get_unpaid_bills(&owner, &0, &10);
     assert_eq!(page1.count, 10);
     assert!(page1.next_cursor > 0);
-    
+
     let page2 = client.get_unpaid_bills(&owner, &page1.next_cursor, &10);
     assert_eq!(page2.count, 5);
-    
+
     // Verify all amounts are correct
     for bill in page1.items.iter() {
         assert_eq!(bill.amount, large_amount);
