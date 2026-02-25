@@ -32,12 +32,12 @@ These contracts have been developed and tested with the following versions:
 
 ### Version Compatibility Matrix
 
-| Component | Version | Status | Notes |
-|-----------|---------|--------|-------|
-| soroban-sdk | 21.0.0 | ✅ Tested | Current stable release |
-| soroban-cli | 21.0.0 | ✅ Tested | Matches SDK version |
-| Protocol 20 | - | ✅ Compatible | Soroban Phase 1 features |
-| Protocol 21+ | - | ⚠️ Untested | Should be compatible, validation recommended |
+| Component    | Version | Status        | Notes                                        |
+| ------------ | ------- | ------------- | -------------------------------------------- |
+| soroban-sdk  | 21.0.0  | ✅ Tested     | Current stable release                       |
+| soroban-cli  | 21.0.0  | ✅ Tested     | Matches SDK version                          |
+| Protocol 20  | -       | ✅ Compatible | Soroban Phase 1 features                     |
+| Protocol 21+ | -       | ⚠️ Untested   | Should be compatible, validation recommended |
 
 ### Upgrading to New Soroban Versions
 
@@ -46,6 +46,7 @@ When a new Soroban SDK or protocol version is released, follow these steps to va
 #### 1. Review Release Notes
 
 Check the [Soroban SDK releases](https://github.com/stellar/rs-soroban-sdk/releases) for:
+
 - Breaking changes in contract APIs
 - New features or optimizations
 - Deprecated functions
@@ -64,6 +65,7 @@ soroban-sdk = { version = "X.Y.Z", features = ["testutils"] }
 ```
 
 Contracts to update:
+
 - `remittance_split/Cargo.toml`
 - `savings_goals/Cargo.toml`
 - `bill_payments/Cargo.toml`
@@ -80,6 +82,7 @@ cargo install --locked --version X.Y.Z soroban-cli
 ```
 
 Verify installation:
+
 ```bash
 soroban version
 ```
@@ -132,6 +135,7 @@ Common breaking changes to watch for:
 #### 7. Update Documentation
 
 After successful validation:
+
 - Update this compatibility section with new versions
 - Document any migration steps in `DEPLOYMENT.md`
 - Update code examples if APIs changed
@@ -156,6 +160,7 @@ The contracts are designed to be compatible with:
 - **Mainnet**: Currently running Protocol 20+
 
 Check current network protocol versions:
+
 ```bash
 # Testnet
 soroban network container logs stellar 2>&1 | grep "protocol version"
@@ -169,6 +174,7 @@ curl -X POST https://soroban-testnet.stellar.org \
 ### Troubleshooting Version Issues
 
 **Build Errors After Upgrade:**
+
 ```bash
 # Clear all caches
 cargo clean
@@ -180,11 +186,13 @@ cargo build --release --target wasm32-unknown-unknown
 ```
 
 **Test Failures:**
+
 - Check for deprecated test utilities in SDK release notes
 - Verify mock contract behavior hasn't changed
 - Review event emission format changes
 
 **Deployment Issues:**
+
 - Ensure CLI version matches SDK version
 - Verify network is running compatible protocol version
 - Check for new deployment flags or requirements
@@ -234,6 +242,7 @@ Handles automatic allocation of remittance funds into different categories.
 - `calculate_split`: Calculate actual amounts from total remittance
 
 **Events:**
+
 - `SplitInitializedEvent`: Emitted when split configuration is initialized
   - `spending_percent`, `savings_percent`, `bills_percent`, `insurance_percent`, `timestamp`
 - `SplitCalculatedEvent`: Emitted when split amounts are calculated
@@ -256,6 +265,7 @@ Manages goal-based savings with target dates.
 - `get_storage_stats`: Get storage usage statistics
 
 **Events:**
+
 - `GoalCreatedEvent`: Emitted when a new savings goal is created
   - `goal_id`, `name`, `target_amount`, `target_date`, `timestamp`
 - `FundsAddedEvent`: Emitted when funds are added to a goal
@@ -281,6 +291,7 @@ Tracks and manages bill payments with recurring support.
 - `get_storage_stats`: Get storage usage statistics
 
 **Events:**
+
 - `BillCreatedEvent`: Emitted when a new bill is created
   - `bill_id`, `name`, `amount`, `due_date`, `recurring`, `timestamp`
 - `BillPaidEvent`: Emitted when a bill is marked as paid
@@ -302,6 +313,7 @@ Manages micro-insurance policies and premium payments.
 - `deactivate_policy`: Deactivate an insurance policy
 
 **Events:**
+
 - `PolicyCreatedEvent`: Emitted when a new insurance policy is created
   - `policy_id`, `name`, `coverage_type`, `monthly_premium`, `coverage_amount`, `timestamp`
 - `PremiumPaidEvent`: Emitted when a premium is paid
@@ -339,6 +351,7 @@ All contracts emit events for important state changes, enabling real-time tracki
 ### Event Topics
 
 Each contract uses short symbol topics for efficient event identification:
+
 - **Remittance Split**: `init`, `calc`
 - **Savings Goals**: `created`, `added`, `completed`
 - **Bill Payments**: `created`, `paid`, `recurring`
@@ -363,6 +376,27 @@ Run tests for a specific contract:
 cd remittance_split
 cargo test
 ```
+
+### Integration Tests
+
+Multi-contract integration tests verify that all contracts work together correctly:
+
+```bash
+# Run all integration tests
+cargo test -p integration_tests
+
+# Run with output
+cargo test -p integration_tests -- --nocapture
+```
+
+The integration tests simulate real user flows:
+
+- Deploy all contracts (remittance_split, savings_goals, bill_payments, insurance)
+- Initialize split configuration
+- Create goals, bills, and policies
+- Calculate split and verify amounts align with expectations
+
+See [integration_tests/README.md](integration_tests/README.md) for detailed documentation.
 
 ### Cross-Contract Invariant Tests
 
@@ -422,11 +456,13 @@ After verifying optimizations:
 ### CI Integration
 
 Gas benchmarks run automatically in CI on every push and pull request. Results are:
+
 - Compared against baseline for regression detection
 - Uploaded as artifacts (retained for 30 days)
 - Posted as PR comments with comparison details
 
 To view CI results:
+
 1. Go to Actions tab in GitHub
 2. Select a workflow run
 3. Download the `gas-benchmarks` artifact

@@ -1069,6 +1069,7 @@ impl SavingsGoalContract {
         env.storage().instance().set(&symbol_short!("AUDIT"), &log);
     }
 
+    #[allow(dead_code)]
     fn get_owner_goal_ids_map(env: &Env) -> Option<Map<Address, Vec<u32>>> {
         env.storage().instance().get(&Self::STORAGE_OWNER_GOAL_IDS)
     }
