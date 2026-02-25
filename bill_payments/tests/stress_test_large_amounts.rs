@@ -158,7 +158,7 @@ fn test_get_total_unpaid_with_two_large_bills() {
     assert_eq!(total, amount + amount);
 }
 
-#[test]
+// #[test]
 // #[should_panic(expected = "overflow")]
 // fn test_get_total_unpaid_overflow_panics() {
 //     let env = Env::default();

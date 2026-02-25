@@ -2269,7 +2269,7 @@ mod test {
             "Bill must appear overdue exactly one second past due_date"
         );
     }
-
+    #[test]
     /// Mix of past-due, exactly-due, and future bills: only past-due one appears.
     fn test_time_drift_overdue_boundary_mixed_bills() {
         let env = Env::default();

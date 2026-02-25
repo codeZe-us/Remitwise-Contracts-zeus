@@ -13,7 +13,7 @@
 //! - Overflow returns RemittanceSplitError::Overflow rather than panicking
 //! - For 100% total split, max safe value is approximately i128::MAX / 100
 
-use remittance_split::{RemittanceSplit, RemittanceSplitClient, RemittanceSplitError};
+use remittance_split::{RemittanceSplit, RemittanceSplitClient};
 use soroban_sdk::testutils::Address as AddressTrait;
 use soroban_sdk::Env;
 

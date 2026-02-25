@@ -44,7 +44,7 @@ fn bench_get_total_unpaid_worst_case() {
     let owner = <Address as AddressTrait>::generate(&env);
 
     // FIX: Explicitly set time to well before the due date (1,000,000)
-    env.ledger().set_timestamp(100); 
+    env.ledger().set_timestamp(100);
 
     let name = String::from_str(&env, "BenchBill");
     for _ in 0..100 {

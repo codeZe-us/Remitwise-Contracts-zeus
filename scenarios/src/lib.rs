@@ -1,6 +1,6 @@
 pub mod tests {
-    use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
-    use soroban_sdk::{Address, Env};
+    use soroban_sdk::testutils::{Ledger, LedgerInfo};
+    use soroban_sdk::Env;
 
     pub fn setup_env() -> Env {
         let env = Env::default();
