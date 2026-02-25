@@ -1,4 +1,4 @@
-﻿#![cfg(test)]
+#![cfg(test)]
 
 //! Stress tests for arithmetic operations with very large i128 values in remittance_split
 //!
@@ -280,7 +280,11 @@ fn test_checked_arithmetic_prevents_silent_overflow() {
     for amount in dangerous_amounts {
         let result = client.try_calculate_split(&amount);
         // Should return error, not panic or wrap around
-        assert!(result.is_err(), "Should have detected overflow for amount: {}", amount);
+        assert!(
+            result.is_err(),
+            "Should have detected overflow for amount: {}",
+            amount
+        );
     }
 }
 

@@ -1,4 +1,4 @@
-﻿#![cfg(test)]
+#![cfg(test)]
 
 //! Stress tests for arithmetic operations with very large i128 values
 //!
