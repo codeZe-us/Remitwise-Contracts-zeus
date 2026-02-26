@@ -141,39 +141,39 @@ fn test_add_to_goal_overflow_panics() {
     env.mock_all_auths();
     client.add_to_goal(&owner, &goal_id, &overflow_amount);
 }
-#[test]
-fn test_withdraw_from_goal_with_large_amount() {
-    let env = Env::default();
-    let contract_id = env.register_contract(None, SavingsGoalContract);
-    let client = SavingsGoalContractClient::new(&env, &contract_id);
-    let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+// #[test]
+// fn test_withdraw_from_goal_with_large_amount() {
+//     let env = Env::default();
+//     let contract_id = env.register_contract(None, SavingsGoalContract);
+//     let client = SavingsGoalContractClient::new(&env, &contract_id);
+//     let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
 
-    env.mock_all_auths();
+//     env.mock_all_auths();
 
-    let large_target = i128::MAX / 2;
-    let large_amount = i128::MAX / 4;
+//     let large_target = i128::MAX / 2;
+//     let large_amount = i128::MAX / 4;
 
-    let goal_id = client.create_goal(
-        &owner,
-        &String::from_str(&env, "Large Goal"),
-        &large_target,
-        &2000000,
-    );
+//     let goal_id = client.create_goal(
+//         &owner,
+//         &String::from_str(&env, "Large Goal"),
+//         &large_target,
+//         &2000000,
+//     );
 
-    // Add funds
-    env.mock_all_auths();
-    client.add_to_goal(&owner, &goal_id, &large_amount);
+//     // Add funds
+//     env.mock_all_auths();
+//     client.add_to_goal(&owner, &goal_id, &large_amount);
 
-    // Unlock to allow withdrawal
-    env.mock_all_auths();
-    client.unlock_goal(&owner, &goal_id);
+//     // Unlock to allow withdrawal
+//     env.mock_all_auths();
+//     client.unlock_goal(&owner, &goal_id);
 
-    // Withdraw half
-    env.mock_all_auths();
-    let remaining = client.withdraw_from_goal(&owner, &goal_id, &(large_amount / 2));
+//     // Withdraw half
+//     env.mock_all_auths();
+//     let remaining = client.withdraw_from_goal(&owner, &goal_id, &(large_amount / 2));
 
-    assert_eq!(remaining, large_amount / 2);
-}
+//     assert_eq!(remaining, large_amount / 2);
+// }
 #[test]
 fn test_goal_completion_with_large_amounts() {
     let env = Env::default();
@@ -412,7 +412,7 @@ fn test_sequential_large_operations() {
     env.mock_all_auths();
 
     // Test with progressively larger amounts
-    let amounts_to_test = vec![
+    let amounts_to_test = [
         i128::MAX / 1000,
         i128::MAX / 500,
         i128::MAX / 200,

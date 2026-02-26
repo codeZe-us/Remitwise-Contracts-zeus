@@ -624,7 +624,7 @@ impl SavingsGoalContract {
 
         if goal.owner != caller {
             Self::append_audit(&env, symbol_short!("add"), &caller, false);
-            return Err(SavingsGoalsError::Unauthorized);
+            panic!("Only the goal owner can add funds");
         }
 
         goal.current_amount = goal

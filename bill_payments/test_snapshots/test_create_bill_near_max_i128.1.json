@@ -17,47 +17,25 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "string": "Late Payment Test"
+                  "string": "Large Bill"
                 },
                 {
                   "i128": {
-                    "hi": 0,
-                    "lo": 300
+                    "hi": 4611686018427387903,
+                    "lo": 18446744073709551615
                   }
                 },
                 {
                   "u64": 1000000
                 },
                 {
-                  "bool": true
+                  "bool": false
                 },
                 {
-                  "u32": 30
+                  "u32": 0
                 },
                 {
                   "string": "XLM"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "pay_bill",
-              "args": [
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                },
-                {
-                  "u32": 1
                 }
               ]
             }
@@ -71,7 +49,7 @@
   "ledger": {
     "protocol_version": 21,
     "sequence_number": 0,
-    "timestamp": 1000500,
+    "timestamp": 0,
     "network_id": "0000000000000000000000000000000000000000000000000000000000000000",
     "base_reserve": 0,
     "min_persistent_entry_ttl": 4096,
@@ -119,8 +97,8 @@
                                     },
                                     "val": {
                                       "i128": {
-                                        "hi": 0,
-                                        "lo": 300
+                                        "hi": 4611686018427387903,
+                                        "lo": 18446744073709551615
                                       }
                                     }
                                   },
@@ -129,7 +107,7 @@
                                       "symbol": "created_at"
                                     },
                                     "val": {
-                                      "u64": 100
+                                      "u64": 0
                                     }
                                   },
                                   {
@@ -153,7 +131,7 @@
                                       "symbol": "frequency_days"
                                     },
                                     "val": {
-                                      "u32": 30
+                                      "u32": 0
                                     }
                                   },
                                   {
@@ -169,113 +147,7 @@
                                       "symbol": "name"
                                     },
                                     "val": {
-                                      "string": "Late Payment Test"
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "owner"
-                                    },
-                                    "val": {
-                                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "paid"
-                                    },
-                                    "val": {
-                                      "bool": true
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "paid_at"
-                                    },
-                                    "val": {
-                                      "u64": 1000500
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "recurring"
-                                    },
-                                    "val": {
-                                      "bool": true
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "schedule_id"
-                                    },
-                                    "val": "void"
-                                  }
-                                ]
-                              }
-                            },
-                            {
-                              "key": {
-                                "u32": 2
-                              },
-                              "val": {
-                                "map": [
-                                  {
-                                    "key": {
-                                      "symbol": "amount"
-                                    },
-                                    "val": {
-                                      "i128": {
-                                        "hi": 0,
-                                        "lo": 300
-                                      }
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "created_at"
-                                    },
-                                    "val": {
-                                      "u64": 1000500
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "currency"
-                                    },
-                                    "val": {
-                                      "string": "XLM"
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "due_date"
-                                    },
-                                    "val": {
-                                      "u64": 3592000
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "frequency_days"
-                                    },
-                                    "val": {
-                                      "u32": 30
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "id"
-                                    },
-                                    "val": {
-                                      "u32": 2
-                                    }
-                                  },
-                                  {
-                                    "key": {
-                                      "symbol": "name"
-                                    },
-                                    "val": {
-                                      "string": "Late Payment Test"
+                                      "string": "Large Bill"
                                     }
                                   },
                                   {
@@ -305,7 +177,7 @@
                                       "symbol": "recurring"
                                     },
                                     "val": {
-                                      "bool": true
+                                      "bool": false
                                     }
                                   },
                                   {
@@ -325,7 +197,7 @@
                           "symbol": "NEXT_ID"
                         },
                         "val": {
-                          "u32": 2
+                          "u32": 1
                         }
                       },
                       {
@@ -340,8 +212,8 @@
                               },
                               "val": {
                                 "i128": {
-                                  "hi": 0,
-                                  "lo": 300
+                                  "hi": 4611686018427387903,
+                                  "lo": 18446744073709551615
                                 }
                               }
                             }
@@ -380,39 +252,6 @@
                 "key": {
                   "ledger_key_nonce": {
                     "nonce": 801925984706572462
-                  }
-                },
-                "durability": "temporary",
-                "val": "void"
-              }
-            },
-            "ext": "v0"
-          },
-          6311999
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-            "key": {
-              "ledger_key_nonce": {
-                "nonce": 5541220902715666415
-              }
-            },
-            "durability": "temporary"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-                "key": {
-                  "ledger_key_nonce": {
-                    "nonce": 5541220902715666415
                   }
                 },
                 "durability": "temporary",
@@ -472,22 +311,22 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                 },
                 {
-                  "string": "Late Payment Test"
+                  "string": "Large Bill"
                 },
                 {
                   "i128": {
-                    "hi": 0,
-                    "lo": 300
+                    "hi": 4611686018427387903,
+                    "lo": 18446744073709551615
                   }
                 },
                 {
                   "u64": 1000000
                 },
                 {
-                  "bool": true
+                  "bool": false
                 },
                 {
-                  "u32": 30
+                  "u32": 0
                 },
                 {
                   "string": "XLM"
@@ -530,8 +369,8 @@
                 },
                 {
                   "i128": {
-                    "hi": 0,
-                    "lo": 300
+                    "hi": 4611686018427387903,
+                    "lo": 18446744073709551615
                   }
                 },
                 {
@@ -582,107 +421,11 @@
                 "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
               },
               {
-                "symbol": "pay_bill"
-              }
-            ],
-            "data": {
-              "vec": [
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                },
-                {
-                  "u32": 1
-                }
-              ]
-            }
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "type_": "contract",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "Remitwise"
-              },
-              {
-                "u32": 0
-              },
-              {
-                "u32": 2
-              },
-              {
-                "symbol": "paid"
-              }
-            ],
-            "data": {
-              "vec": [
-                {
-                  "u32": 1
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                },
-                {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 300
-                  }
-                }
-              ]
-            }
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": "0000000000000000000000000000000000000000000000000000000000000001",
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_return"
-              },
-              {
-                "symbol": "pay_bill"
-              }
-            ],
-            "data": "void"
-          }
-        }
-      },
-      "failed_call": false
-    },
-    {
-      "event": {
-        "ext": "v0",
-        "contract_id": null,
-        "type_": "diagnostic",
-        "body": {
-          "v0": {
-            "topics": [
-              {
-                "symbol": "fn_call"
-              },
-              {
-                "bytes": "0000000000000000000000000000000000000000000000000000000000000001"
-              },
-              {
                 "symbol": "get_bill"
               }
             ],
             "data": {
-              "u32": 2
+              "u32": 1
             }
           }
         }
@@ -712,8 +455,8 @@
                   },
                   "val": {
                     "i128": {
-                      "hi": 0,
-                      "lo": 300
+                      "hi": 4611686018427387903,
+                      "lo": 18446744073709551615
                     }
                   }
                 },
@@ -722,7 +465,7 @@
                     "symbol": "created_at"
                   },
                   "val": {
-                    "u64": 1000500
+                    "u64": 0
                   }
                 },
                 {
@@ -738,7 +481,7 @@
                     "symbol": "due_date"
                   },
                   "val": {
-                    "u64": 3592000
+                    "u64": 1000000
                   }
                 },
                 {
@@ -746,7 +489,7 @@
                     "symbol": "frequency_days"
                   },
                   "val": {
-                    "u32": 30
+                    "u32": 0
                   }
                 },
                 {
@@ -754,7 +497,7 @@
                     "symbol": "id"
                   },
                   "val": {
-                    "u32": 2
+                    "u32": 1
                   }
                 },
                 {
@@ -762,7 +505,7 @@
                     "symbol": "name"
                   },
                   "val": {
-                    "string": "Late Payment Test"
+                    "string": "Large Bill"
                   }
                 },
                 {
@@ -792,7 +535,7 @@
                     "symbol": "recurring"
                   },
                   "val": {
-                    "bool": true
+                    "bool": false
                   }
                 },
                 {
