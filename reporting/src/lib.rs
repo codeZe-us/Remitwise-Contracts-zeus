@@ -3,6 +3,8 @@ use soroban_sdk::{
     contract, contractclient, contractimpl, contracttype, symbol_short, Address, Env, Map, Vec,
 };
 
+use remitwise_common::Category;
+
 // Storage TTL constants for active data
 const INSTANCE_LIFETIME_THRESHOLD: u32 = 17280; // ~1 day
 const INSTANCE_BUMP_AMOUNT: u32 = 518400; // ~30 days
@@ -10,17 +12,6 @@ const INSTANCE_BUMP_AMOUNT: u32 = 518400; // ~30 days
 // Storage TTL constants for archived data (longer retention, less frequent access)
 const ARCHIVE_LIFETIME_THRESHOLD: u32 = 17280; // ~1 day
 const ARCHIVE_BUMP_AMOUNT: u32 = 2592000; // ~180 days (6 months)
-
-/// Category for financial breakdown
-#[contracttype]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(u32)]
-pub enum Category {
-    Spending = 1,
-    Savings = 2,
-    Bills = 3,
-    Insurance = 4,
-}
 
 /// Financial health score (0-100)
 #[contracttype]
@@ -140,6 +131,50 @@ pub struct ContractAddresses {
 
 /// Events emitted by the reporting contract
 #[contracttype]
+#[derive(Clone, Copy)]
+pub enum ReportingError {
+    AlreadyInitialized = 1,
+    NotInitialized = 2,
+    Unauthorized = 3,
+    AddressesNotConfigured = 4,
+}
+
+impl From<ReportingError> for soroban_sdk::Error {
+    fn from(err: ReportingError) -> Self {
+        match err {
+            ReportingError::AlreadyInitialized => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            ReportingError::NotInitialized => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::MissingValue,
+            )),
+            ReportingError::Unauthorized => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            ReportingError::AddressesNotConfigured => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::MissingValue,
+            )),
+        }
+    }
+}
+
+impl From<&ReportingError> for soroban_sdk::Error {
+    fn from(err: &ReportingError) -> Self {
+        (*err).into()
+    }
+}
+
+impl From<soroban_sdk::Error> for ReportingError {
+    fn from(_err: soroban_sdk::Error) -> Self {
+        ReportingError::Unauthorized
+    }
+}
+
+#[contracttype]
 #[derive(Clone)]
 pub enum ReportEvent {
     ReportGenerated,
@@ -192,7 +227,7 @@ pub trait BillPaymentsTrait {
 
 #[contractclient(name = "InsuranceClient")]
 pub trait InsuranceTrait {
-    fn get_active_policies(env: Env, owner: Address) -> Vec<InsurancePolicy>;
+    fn get_active_policies(env: Env, owner: Address, cursor: u32, limit: u32) -> PolicyPage;
     fn get_total_monthly_premium(env: Env, owner: Address) -> i128;
 }
 
@@ -208,6 +243,7 @@ pub struct SavingsGoal {
     pub current_amount: i128,
     pub target_date: u64,
     pub locked: bool,
+    pub unlock_date: Option<u64>,
 }
 
 #[contracttype]
@@ -223,6 +259,8 @@ pub struct Bill {
     pub paid: bool,
     pub created_at: u64,
     pub paid_at: Option<u64>,
+    pub schedule_id: Option<u32>,
+    pub currency: soroban_sdk::String,
 }
 
 #[contracttype]
@@ -236,6 +274,15 @@ pub struct InsurancePolicy {
     pub coverage_amount: i128,
     pub active: bool,
     pub next_payment_date: u64,
+    pub schedule_id: Option<u32>,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct PolicyPage {
+    pub items: Vec<InsurancePolicy>,
+    pub next_cursor: u32,
+    pub count: u32,
 }
 
 #[contract]
@@ -243,13 +290,25 @@ pub struct ReportingContract;
 
 #[contractimpl]
 impl ReportingContract {
-    /// Initialize the reporting contract with admin
-    pub fn init(env: Env, admin: Address) -> bool {
+    /// Initialize the reporting contract with an admin address.
+    ///
+    /// # Arguments
+    /// * `admin` - Address of the contract administrator (must authorize)
+    ///
+    /// # Returns
+    /// `Ok(())` on successful initialization
+    ///
+    /// # Errors
+    /// * `AlreadyInitialized` - If the contract has already been initialized
+    ///
+    /// # Panics
+    /// * If `admin` does not authorize the transaction
+    pub fn init(env: Env, admin: Address) -> Result<(), ReportingError> {
         admin.require_auth();
 
         let existing: Option<Address> = env.storage().instance().get(&symbol_short!("ADMIN"));
         if existing.is_some() {
-            panic!("Contract already initialized");
+            return Err(ReportingError::AlreadyInitialized);
         }
 
         Self::extend_instance_ttl(&env);
@@ -257,10 +316,28 @@ impl ReportingContract {
             .instance()
             .set(&symbol_short!("ADMIN"), &admin);
 
-        true
+        Ok(())
     }
 
-    /// Configure contract addresses (admin only)
+    /// Configure addresses for all related contracts (admin only).
+    ///
+    /// # Arguments
+    /// * `caller` - Address of the administrator (must authorize)
+    /// * `remittance_split` - Address of the remittance split contract
+    /// * `savings_goals` - Address of the savings goals contract
+    /// * `bill_payments` - Address of the bill payments contract
+    /// * `insurance` - Address of the insurance contract
+    /// * `family_wallet` - Address of the family wallet contract
+    ///
+    /// # Returns
+    /// `Ok(())` on successful configuration
+    ///
+    /// # Errors
+    /// * `NotInitialized` - If contract has not been initialized
+    /// * `Unauthorized` - If caller is not the admin
+    ///
+    /// # Panics
+    /// * If `caller` does not authorize the transaction
     pub fn configure_addresses(
         env: Env,
         caller: Address,
@@ -269,17 +346,17 @@ impl ReportingContract {
         bill_payments: Address,
         insurance: Address,
         family_wallet: Address,
-    ) -> bool {
+    ) -> Result<(), ReportingError> {
         caller.require_auth();
 
         let admin: Address = env
             .storage()
             .instance()
             .get(&symbol_short!("ADMIN"))
-            .expect("Contract not initialized");
+            .ok_or(ReportingError::NotInitialized)?;
 
         if caller != admin {
-            panic!("Only admin can configure addresses");
+            return Err(ReportingError::Unauthorized);
         }
 
         Self::extend_instance_ttl(&env);
@@ -301,7 +378,7 @@ impl ReportingContract {
             caller,
         );
 
-        true
+        Ok(())
     }
 
     /// Generate remittance summary report
@@ -478,7 +555,8 @@ impl ReportingContract {
             .expect("Contract addresses not configured");
 
         let insurance_client = InsuranceClient::new(&env, &addresses.insurance);
-        let policies = insurance_client.get_active_policies(&user);
+        let policy_page = insurance_client.get_active_policies(&user, &0, &50);
+        let policies = policy_page.items;
         let monthly_premium = insurance_client.get_total_monthly_premium(&user);
 
         let mut total_coverage = 0i128;
@@ -553,8 +631,8 @@ impl ReportingContract {
 
         // Insurance score (0-20 points)
         let insurance_client = InsuranceClient::new(&env, &addresses.insurance);
-        let policies = insurance_client.get_active_policies(&user);
-        let insurance_score = if !policies.is_empty() { 20 } else { 0 };
+        let policy_page = insurance_client.get_active_policies(&user, &0, &1);
+        let insurance_score = if !policy_page.items.is_empty() { 20 } else { 0 };
 
         let total_score = savings_score + bills_score + insurance_score;
 

@@ -43,9 +43,6 @@ const INSTANCE_BUMP_AMOUNT: u32 = 518400;
 pub const DEFAULT_PAGE_LIMIT: u32 = 20;
 pub const MAX_PAGE_LIMIT: u32 = 50;
 
-#[contract]
-pub struct SavingsGoalContract;
-
 #[contracttype]
 #[derive(Clone)]
 pub struct SavingsGoal {
@@ -57,6 +54,7 @@ pub struct SavingsGoal {
     pub target_date: u64,
     pub locked: bool,
     pub unlock_date: Option<u64>,
+    pub tags: Vec<String>,
 }
 
 /// Paginated result for savings goal queries
@@ -85,6 +83,60 @@ pub struct SavingsSchedule {
     pub created_at: u64,
     pub last_executed: Option<u64>,
     pub missed_count: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Copy)]
+pub enum SavingsGoalsError {
+    InvalidAmount = 1,
+    GoalNotFound = 2,
+    Unauthorized = 3,
+    GoalLocked = 4,
+    InsufficientBalance = 5,
+    Overflow = 6,
+}
+
+impl From<SavingsGoalsError> for soroban_sdk::Error {
+    fn from(err: SavingsGoalsError) -> Self {
+        match err {
+            SavingsGoalsError::InvalidAmount => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+            SavingsGoalsError::GoalNotFound => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::MissingValue,
+            )),
+            SavingsGoalsError::Unauthorized => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            SavingsGoalsError::GoalLocked => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidAction,
+            )),
+            SavingsGoalsError::InsufficientBalance => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+            SavingsGoalsError::Overflow => soroban_sdk::Error::from((
+                soroban_sdk::xdr::ScErrorType::Contract,
+                soroban_sdk::xdr::ScErrorCode::InvalidInput,
+            )),
+        }
+    }
+}
+
+impl From<&SavingsGoalsError> for soroban_sdk::Error {
+    fn from(err: &SavingsGoalsError) -> Self {
+        (*err).into()
+    }
+}
+
+impl From<soroban_sdk::Error> for SavingsGoalsError {
+    fn from(_err: soroban_sdk::Error) -> Self {
+        SavingsGoalsError::Unauthorized
+    }
 }
 
 #[contracttype]
@@ -142,10 +194,14 @@ pub struct ContributionItem {
     pub amount: i128,
 }
 
+#[contract]
+pub struct SavingsGoalContract;
+
 #[contractimpl]
 impl SavingsGoalContract {
     const STORAGE_NEXT_ID: Symbol = symbol_short!("NEXT_ID");
     const STORAGE_GOALS: Symbol = symbol_short!("GOALS");
+    const STORAGE_OWNER_GOAL_IDS: Symbol = symbol_short!("OWN_GOAL");
 
     // -----------------------------------------------------------------------
     // Internal helpers
@@ -191,6 +247,11 @@ impl SavingsGoalContract {
     // Pause / upgrade
     // -----------------------------------------------------------------------
 
+    /// Bootstrap storage: set NEXT_ID to 1 and GOALS to an empty map only when
+    /// those keys are missing. Intended to be idempotent: calling init() more
+    /// than once (e.g. from different entrypoints or upgrade paths) must not
+    /// overwrite existing goals or reset NEXT_ID, to avoid ID collisions and
+    /// data loss.
     pub fn init(env: Env) {
         let storage = env.storage().persistent();
         if storage.get::<_, u32>(&Self::STORAGE_NEXT_ID).is_none() {
@@ -337,6 +398,112 @@ impl SavingsGoalContract {
     }
 
     // -----------------------------------------------------------------------
+    // Tag management
+    // -----------------------------------------------------------------------
+
+    fn validate_tags(tags: &Vec<String>) {
+        if tags.is_empty() {
+            panic!("Tags cannot be empty");
+        }
+        for tag in tags.iter() {
+            if tag.len() == 0 || tag.len() > 32 {
+                panic!("Tag must be between 1 and 32 characters");
+            }
+        }
+    }
+
+    pub fn add_tags_to_goal(
+        env: Env,
+        caller: Address,
+        goal_id: u32,
+        tags: Vec<String>,
+    ) {
+        caller.require_auth();
+        Self::validate_tags(&tags);
+        Self::extend_instance_ttl(&env);
+
+        let mut goals: Map<u32, SavingsGoal> = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("GOALS"))
+            .unwrap_or_else(|| Map::new(&env));
+
+        let mut goal = goals.get(goal_id).expect("Goal not found");
+
+        if goal.owner != caller {
+            Self::append_audit(&env, symbol_short!("add_tags"), &caller, false);
+            panic!("Only the goal owner can add tags");
+        }
+
+        for tag in tags.iter() {
+            goal.tags.push_back(tag);
+        }
+
+        goals.set(goal_id, goal);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("GOALS"), &goals);
+
+        env.events().publish(
+            (symbol_short!("savings"), symbol_short!("tags_add")),
+            (goal_id, caller.clone(), tags.clone()),
+        );
+
+        Self::append_audit(&env, symbol_short!("add_tags"), &caller, true);
+    }
+
+    pub fn remove_tags_from_goal(
+        env: Env,
+        caller: Address,
+        goal_id: u32,
+        tags: Vec<String>,
+    ) {
+        caller.require_auth();
+        Self::validate_tags(&tags);
+        Self::extend_instance_ttl(&env);
+
+        let mut goals: Map<u32, SavingsGoal> = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("GOALS"))
+            .unwrap_or_else(|| Map::new(&env));
+
+        let mut goal = goals.get(goal_id).expect("Goal not found");
+
+        if goal.owner != caller {
+            Self::append_audit(&env, symbol_short!("rem_tags"), &caller, false);
+            panic!("Only the goal owner can remove tags");
+        }
+
+        let mut new_tags = Vec::new(&env);
+        for existing_tag in goal.tags.iter() {
+            let mut should_keep = true;
+            for remove_tag in tags.iter() {
+                if existing_tag == remove_tag {
+                    should_keep = false;
+                    break;
+                }
+            }
+            if should_keep {
+                new_tags.push_back(existing_tag);
+            }
+        }
+
+        goal.tags = new_tags;
+        goals.set(goal_id, goal);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("GOALS"), &goals);
+
+        env.events().publish(
+            (symbol_short!("savings"), symbol_short!("tags_rem")),
+            (goal_id, caller.clone(), tags.clone()),
+        );
+
+        Self::append_audit(&env, symbol_short!("rem_tags"), &caller, true);
+    }
+
+    // -----------------------------------------------------------------------
     // Core goal operations
     // -----------------------------------------------------------------------
 
@@ -346,13 +513,13 @@ impl SavingsGoalContract {
         name: String,
         target_amount: i128,
         target_date: u64,
-    ) -> u32 {
+    ) -> Result<u32, SavingsGoalsError> {
         owner.require_auth();
         Self::require_not_paused(&env, pause_functions::CREATE_GOAL);
 
         if target_amount <= 0 {
             Self::append_audit(&env, symbol_short!("create"), &owner, false);
-            panic!("Target amount must be positive");
+            return Err(SavingsGoalsError::InvalidAmount);
         }
 
         Self::extend_instance_ttl(&env);
@@ -379,6 +546,7 @@ impl SavingsGoalContract {
             target_date,
             locked: true,
             unlock_date: None,
+            tags: Vec::new(&env),
         };
 
         goals.set(next_id, goal.clone());
@@ -388,6 +556,7 @@ impl SavingsGoalContract {
         env.storage()
             .instance()
             .set(&symbol_short!("NEXT_ID"), &next_id);
+        Self::append_owner_goal_id(&env, &owner, next_id);
 
         let event = GoalCreatedEvent {
             goal_id: next_id,
@@ -402,16 +571,39 @@ impl SavingsGoalContract {
             (next_id, owner),
         );
 
-        next_id
+        Ok(next_id)
     }
 
-    pub fn add_to_goal(env: Env, caller: Address, goal_id: u32, amount: i128) -> i128 {
+    /// Adds funds to an existing savings goal.
+    ///
+    /// # Arguments
+    /// * `caller` - Address of the goal owner (must authorize)
+    /// * `goal_id` - ID of the goal to add funds to
+    /// * `amount` - Amount to add in stroops (must be > 0)
+    ///
+    /// # Returns
+    /// `Ok(new_total)` - The new total amount in the goal
+    ///
+    /// # Errors
+    /// * `InvalidAmount` - If amount ≤ 0
+    /// * `GoalNotFound` - If goal_id does not exist
+    /// * `Unauthorized` - If caller is not the goal owner
+    /// * `Overflow` - If adding amount would overflow i128
+    ///
+    /// # Panics
+    /// * If `caller` does not authorize the transaction
+    pub fn add_to_goal(
+        env: Env,
+        caller: Address,
+        goal_id: u32,
+        amount: i128,
+    ) -> Result<i128, SavingsGoalsError> {
         caller.require_auth();
         Self::require_not_paused(&env, pause_functions::ADD_TO_GOAL);
 
         if amount <= 0 {
             Self::append_audit(&env, symbol_short!("add"), &caller, false);
-            panic!("Amount must be positive");
+            return Err(SavingsGoalsError::InvalidAmount);
         }
 
         Self::extend_instance_ttl(&env);
@@ -426,16 +618,19 @@ impl SavingsGoalContract {
             Some(g) => g,
             None => {
                 Self::append_audit(&env, symbol_short!("add"), &caller, false);
-                panic!("Goal not found");
+                return Err(SavingsGoalsError::GoalNotFound);
             }
         };
 
         if goal.owner != caller {
             Self::append_audit(&env, symbol_short!("add"), &caller, false);
-            panic!("Goal not found");
+            return Err(SavingsGoalsError::Unauthorized);
         }
 
-        goal.current_amount = goal.current_amount.checked_add(amount).expect("overflow");
+        goal.current_amount = goal
+            .current_amount
+            .checked_add(amount)
+            .ok_or(SavingsGoalsError::Overflow)?;
         let new_total = goal.current_amount;
         let was_completed = new_total >= goal.target_amount;
         let previously_completed = (new_total - amount) >= goal.target_amount;
@@ -476,7 +671,7 @@ impl SavingsGoalContract {
             );
         }
 
-        new_total
+        Ok(new_total)
     }
 
     pub fn batch_add_to_goals(
@@ -561,13 +756,38 @@ impl SavingsGoalContract {
         count
     }
 
-    pub fn withdraw_from_goal(env: Env, caller: Address, goal_id: u32, amount: i128) -> i128 {
+    /// Withdraws funds from an existing savings goal.
+    ///
+    /// # Arguments
+    /// * `caller` - Address of the goal owner (must authorize)
+    /// * `goal_id` - ID of the goal to withdraw from
+    /// * `amount` - Amount to withdraw in stroops (must be > 0)
+    ///
+    /// # Returns
+    /// `Ok(remaining_amount)` - The remaining amount in the goal after withdrawal
+    ///
+    /// # Errors
+    /// * `InvalidAmount` - If amount ≤ 0
+    /// * `GoalNotFound` - If goal_id does not exist
+    /// * `Unauthorized` - If caller is not the goal owner
+    /// * `GoalLocked` - If goal is locked or time-locked
+    /// * `InsufficientBalance` - If amount > current_amount
+    /// * `Overflow` - If subtraction would underflow i128
+    ///
+    /// # Panics
+    /// * If `caller` does not authorize the transaction
+    pub fn withdraw_from_goal(
+        env: Env,
+        caller: Address,
+        goal_id: u32,
+        amount: i128,
+    ) -> Result<i128, SavingsGoalsError> {
         caller.require_auth();
         Self::require_not_paused(&env, pause_functions::WITHDRAW);
 
         if amount <= 0 {
             Self::append_audit(&env, symbol_short!("withdraw"), &caller, false);
-            panic!("Amount must be positive");
+            return Err(SavingsGoalsError::InvalidAmount);
         }
 
         Self::extend_instance_ttl(&env);
@@ -582,34 +802,37 @@ impl SavingsGoalContract {
             Some(g) => g,
             None => {
                 Self::append_audit(&env, symbol_short!("withdraw"), &caller, false);
-                panic!("Goal not found");
+                return Err(SavingsGoalsError::GoalNotFound);
             }
         };
 
         if goal.owner != caller {
             Self::append_audit(&env, symbol_short!("withdraw"), &caller, false);
-            panic!("Only the goal owner can withdraw funds");
+            return Err(SavingsGoalsError::Unauthorized);
         }
 
         if goal.locked {
             Self::append_audit(&env, symbol_short!("withdraw"), &caller, false);
-            panic!("Cannot withdraw from a locked goal");
+            return Err(SavingsGoalsError::GoalLocked);
         }
 
         if let Some(unlock_date) = goal.unlock_date {
             let current_time = env.ledger().timestamp();
             if current_time < unlock_date {
                 Self::append_audit(&env, symbol_short!("withdraw"), &caller, false);
-                panic!("Goal is time-locked until unlock date");
+                return Err(SavingsGoalsError::GoalLocked);
             }
         }
 
         if amount > goal.current_amount {
             Self::append_audit(&env, symbol_short!("withdraw"), &caller, false);
-            panic!("Insufficient balance");
+            return Err(SavingsGoalsError::InsufficientBalance);
         }
 
-        goal.current_amount = goal.current_amount.checked_sub(amount).expect("underflow");
+        goal.current_amount = goal
+            .current_amount
+            .checked_sub(amount)
+            .ok_or(SavingsGoalsError::Overflow)?;
         let new_amount = goal.current_amount;
 
         goals.set(goal_id, goal);
@@ -623,7 +846,7 @@ impl SavingsGoalContract {
             (goal_id, caller, amount),
         );
 
-        new_amount
+        Ok(new_amount)
     }
 
     pub fn lock_goal(env: Env, caller: Address, goal_id: u32) -> bool {
@@ -858,8 +1081,14 @@ impl SavingsGoalContract {
 
         Self::extend_instance_ttl(&env);
         let mut goals: Map<u32, SavingsGoal> = Map::new(&env);
+        let mut owner_goal_ids: Map<Address, Vec<u32>> = Map::new(&env);
         for g in snapshot.goals.iter() {
-            goals.set(g.id, g);
+            goals.set(g.id, g.clone());
+            let mut ids = owner_goal_ids
+                .get(g.owner.clone())
+                .unwrap_or_else(|| Vec::new(&env));
+            ids.push_back(g.id);
+            owner_goal_ids.set(g.owner.clone(), ids);
         }
         env.storage()
             .instance()
@@ -867,6 +1096,9 @@ impl SavingsGoalContract {
         env.storage()
             .instance()
             .set(&symbol_short!("NEXT_ID"), &snapshot.next_id);
+        env.storage()
+            .instance()
+            .set(&Self::STORAGE_OWNER_GOAL_IDS, &owner_goal_ids);
 
         Self::increment_nonce(&env, &caller);
         Self::append_audit(&env, symbol_short!("import"), &caller, true);
@@ -891,6 +1123,94 @@ impl SavingsGoalContract {
         out
     }
 
+    fn require_nonce(env: &Env, address: &Address, expected: u64) {
+        let current = Self::get_nonce(env.clone(), address.clone());
+        if expected != current {
+            panic!("Invalid nonce: expected {}, got {}", current, expected);
+        }
+    }
+
+    fn increment_nonce(env: &Env, address: &Address) {
+        let current = Self::get_nonce(env.clone(), address.clone());
+        let next = current.checked_add(1).expect("nonce overflow");
+        let mut nonces: Map<Address, u64> = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("NONCES"))
+            .unwrap_or_else(|| Map::new(env));
+        nonces.set(address.clone(), next);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("NONCES"), &nonces);
+    }
+
+    fn compute_goals_checksum(version: u32, next_id: u32, goals: &Vec<SavingsGoal>) -> u64 {
+        let mut c = version as u64 + next_id as u64;
+        for i in 0..goals.len() {
+            if let Some(g) = goals.get(i) {
+                c = c
+                    .wrapping_add(g.id as u64)
+                    .wrapping_add(g.target_amount as u64)
+                    .wrapping_add(g.current_amount as u64);
+            }
+        }
+        c.wrapping_mul(31)
+    }
+
+    fn append_audit(env: &Env, operation: Symbol, caller: &Address, success: bool) {
+        let timestamp = env.ledger().timestamp();
+        let mut log: Vec<AuditEntry> = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("AUDIT"))
+            .unwrap_or_else(|| Vec::new(env));
+        if log.len() >= MAX_AUDIT_ENTRIES {
+            let mut new_log = Vec::new(env);
+            for i in 1..log.len() {
+                if let Some(entry) = log.get(i) {
+                    new_log.push_back(entry);
+                }
+            }
+            log = new_log;
+        }
+        log.push_back(AuditEntry {
+            operation,
+            caller: caller.clone(),
+            timestamp,
+            success,
+        });
+        env.storage().instance().set(&symbol_short!("AUDIT"), &log);
+    }
+
+    #[allow(dead_code)]
+    fn get_owner_goal_ids_map(env: &Env) -> Option<Map<Address, Vec<u32>>> {
+        env.storage().instance().get(&Self::STORAGE_OWNER_GOAL_IDS)
+    }
+
+    fn append_owner_goal_id(env: &Env, owner: &Address, goal_id: u32) {
+        let mut owner_goal_ids: Map<Address, Vec<u32>> = env
+            .storage()
+            .instance()
+            .get(&Self::STORAGE_OWNER_GOAL_IDS)
+            .unwrap_or_else(|| Map::new(env));
+        let mut ids = owner_goal_ids
+            .get(owner.clone())
+            .unwrap_or_else(|| Vec::new(env));
+        ids.push_back(goal_id);
+        owner_goal_ids.set(owner.clone(), ids);
+        env.storage()
+            .instance()
+            .set(&Self::STORAGE_OWNER_GOAL_IDS, &owner_goal_ids);
+    }
+
+    /// Extend the TTL of instance storage
+    fn extend_instance_ttl(env: &Env) {
+        env.storage()
+            .instance()
+            .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+    }
+
+    /// Set time-lock on a goal
     pub fn set_time_lock(env: Env, caller: Address, goal_id: u32, unlock_date: u64) -> bool {
         caller.require_auth();
         Self::extend_instance_ttl(&env);
@@ -1199,75 +1519,6 @@ impl SavingsGoalContract {
             .unwrap_or_else(|| Map::new(&env));
         schedules.get(schedule_id)
     }
-
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
-    fn require_nonce(env: &Env, address: &Address, expected: u64) {
-        let current = Self::get_nonce(env.clone(), address.clone());
-        if expected != current {
-            panic!("Invalid nonce: expected {}, got {}", current, expected);
-        }
-    }
-
-    fn increment_nonce(env: &Env, address: &Address) {
-        let current = Self::get_nonce(env.clone(), address.clone());
-        let next = current.checked_add(1).expect("nonce overflow");
-        let mut nonces: Map<Address, u64> = env
-            .storage()
-            .instance()
-            .get(&symbol_short!("NONCES"))
-            .unwrap_or_else(|| Map::new(env));
-        nonces.set(address.clone(), next);
-        env.storage()
-            .instance()
-            .set(&symbol_short!("NONCES"), &nonces);
-    }
-
-    fn compute_goals_checksum(version: u32, next_id: u32, goals: &Vec<SavingsGoal>) -> u64 {
-        let mut c = version as u64 + next_id as u64;
-        for i in 0..goals.len() {
-            if let Some(g) = goals.get(i) {
-                c = c
-                    .wrapping_add(g.id as u64)
-                    .wrapping_add(g.target_amount as u64)
-                    .wrapping_add(g.current_amount as u64);
-            }
-        }
-        c.wrapping_mul(31)
-    }
-
-    fn append_audit(env: &Env, operation: Symbol, caller: &Address, success: bool) {
-        let timestamp = env.ledger().timestamp();
-        let mut log: Vec<AuditEntry> = env
-            .storage()
-            .instance()
-            .get(&symbol_short!("AUDIT"))
-            .unwrap_or_else(|| Vec::new(env));
-        if log.len() >= MAX_AUDIT_ENTRIES {
-            let mut new_log = Vec::new(env);
-            for i in 1..log.len() {
-                if let Some(entry) = log.get(i) {
-                    new_log.push_back(entry);
-                }
-            }
-            log = new_log;
-        }
-        log.push_back(AuditEntry {
-            operation,
-            caller: caller.clone(),
-            timestamp,
-            success,
-        });
-        env.storage().instance().set(&symbol_short!("AUDIT"), &log);
-    }
-
-    fn extend_instance_ttl(env: &Env) {
-        env.storage()
-            .instance()
-            .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
-    }
 }
 
 // -----------------------------------------------------------------------
@@ -1276,7 +1527,10 @@ impl SavingsGoalContract {
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, Env, String};
+    use soroban_sdk::{
+        testutils::{Address as _, Ledger},
+        Env, String,
+    };
 
     fn make_env() -> Env {
         Env::default()
@@ -1417,5 +1671,187 @@ mod test {
         setup_goals(&env, &client, &owner, 5);
         let all = client.get_all_goals(&owner);
         assert_eq!(all.len(), 5);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Time & Ledger Drift Resilience Tests (#158)
+    //
+    // Assumptions:
+    //  - Stellar ledger timestamps are monotonically increasing in production.
+    //  - is_goal_completed checks current_amount >= target_amount only;
+    //    target_date is informational and does not affect completion status.
+    //  - execute_due_savings_schedules fires when current_time >= next_due
+    //    (inclusive boundary).
+    //  - After execution next_due advances by the interval, preventing
+    //    re-execution even if ledger time were to regress.
+    // ══════════════════════════════════════════════════════════════════════
+
+    /// is_goal_completed is driven by funds only; time passing past target_date
+    /// does not complete an under-funded goal.
+    #[test]
+    fn test_time_drift_is_goal_completed_depends_on_amount_not_time() {
+        let env = make_env();
+        env.mock_all_auths();
+        let id = env.register_contract(None, SavingsGoalContract);
+        let client = SavingsGoalContractClient::new(&env, &id);
+        let owner = Address::generate(&env);
+
+        let target_date = 5000u64;
+        env.ledger().set_timestamp(1000);
+
+        let goal_id = client.create_goal(
+            &owner,
+            &String::from_str(&env, "Vacation"),
+            &10000,
+            &target_date,
+        );
+
+        assert!(!client.is_goal_completed(&goal_id));
+
+        // At exactly target_date – still under-funded
+        env.ledger().set_timestamp(target_date);
+        assert!(!client.is_goal_completed(&goal_id));
+
+        // Past target_date – still under-funded
+        env.ledger().set_timestamp(target_date + 1);
+        assert!(!client.is_goal_completed(&goal_id));
+
+        // Fund after deadline
+        client.add_to_goal(&owner, &goal_id, &10000);
+        assert!(
+            client.is_goal_completed(&goal_id),
+            "Goal must complete on amount alone regardless of time"
+        );
+    }
+
+    /// Goal completes as soon as funded, even far before target_date.
+    #[test]
+    fn test_time_drift_is_goal_completed_early_funding() {
+        let env = make_env();
+        env.mock_all_auths();
+        let id = env.register_contract(None, SavingsGoalContract);
+        let client = SavingsGoalContractClient::new(&env, &id);
+        let owner = Address::generate(&env);
+
+        env.ledger().set_timestamp(100);
+
+        let goal_id = client.create_goal(
+            &owner,
+            &String::from_str(&env, "Emergency Fund"),
+            &5000,
+            &9_999_999,
+        );
+
+        assert!(!client.is_goal_completed(&goal_id));
+        client.add_to_goal(&owner, &goal_id, &5000);
+        assert!(
+            client.is_goal_completed(&goal_id),
+            "Goal must complete before target_date when amount is reached"
+        );
+    }
+
+    /// Schedule must NOT execute one second before next_due and MUST execute
+    /// exactly at next_due (inclusive boundary).
+    #[test]
+    fn test_time_drift_schedule_executes_at_exact_next_due() {
+        let env = make_env();
+        env.mock_all_auths();
+        let id = env.register_contract(None, SavingsGoalContract);
+        let client = SavingsGoalContractClient::new(&env, &id);
+        let owner = Address::generate(&env);
+
+        env.ledger().set_timestamp(1000);
+        let goal_id = client.create_goal(&owner, &String::from_str(&env, "House"), &50000, &200000);
+        let next_due = 3000u64;
+        let schedule_id = client.create_savings_schedule(&owner, &goal_id, &500, &next_due, &86400);
+
+        // One second before due: must NOT execute
+        env.ledger().set_timestamp(next_due - 1);
+        let executed = client.execute_due_savings_schedules();
+        assert_eq!(
+            executed.len(),
+            0,
+            "Must not execute one second before next_due"
+        );
+
+        let goal = client.get_goal(&goal_id).unwrap();
+        assert_eq!(goal.current_amount, 0);
+
+        // Exactly at next_due: must execute
+        env.ledger().set_timestamp(next_due);
+        let executed = client.execute_due_savings_schedules();
+        assert_eq!(executed.len(), 1, "Must execute exactly at next_due");
+        assert_eq!(executed.get(0).unwrap(), schedule_id);
+        let goal = client.get_goal(&goal_id).unwrap();
+        assert_eq!(goal.current_amount, 500);
+    }
+
+    /// After next_due advances, a call before the new next_due must not re-execute.
+    /// Documents non-monotonic time assumption: next_due guards re-runs.
+    #[test]
+    fn test_time_drift_no_double_execution_after_next_due_advances() {
+        let env = make_env();
+        env.mock_all_auths();
+        let id = env.register_contract(None, SavingsGoalContract);
+        let client = SavingsGoalContractClient::new(&env, &id);
+        let owner = Address::generate(&env);
+
+        env.ledger().set_timestamp(1000);
+        let goal_id = client.create_goal(&owner, &String::from_str(&env, "Car"), &20000, &999999);
+        let next_due = 5000u64;
+        let interval = 86400u64;
+        client.create_savings_schedule(&owner, &goal_id, &1000, &next_due, &interval);
+
+        // Execute at next_due
+        env.ledger().set_timestamp(next_due);
+        let executed = client.execute_due_savings_schedules();
+        assert_eq!(executed.len(), 1);
+
+        // Between old next_due and new next_due: no re-execution
+        env.ledger().set_timestamp(next_due + 100);
+        let executed_again = client.execute_due_savings_schedules();
+        assert_eq!(
+            executed_again.len(),
+            0,
+            "Must not re-execute before the new next_due"
+        );
+
+        let goal = client.get_goal(&goal_id).unwrap();
+        assert_eq!(
+            goal.current_amount, 1000,
+            "Funds must be added exactly once"
+        );
+    }
+
+    /// A large forward jump correctly marks missed intervals on a recurring schedule.
+    #[test]
+    fn test_time_drift_large_jump_marks_missed_count() {
+        let env = make_env();
+        env.mock_all_auths();
+        let id = env.register_contract(None, SavingsGoalContract);
+        let client = SavingsGoalContractClient::new(&env, &id);
+        let owner = Address::generate(&env);
+
+        env.ledger().set_timestamp(1000);
+        let goal_id =
+            client.create_goal(&owner, &String::from_str(&env, "Tuition"), &50000, &9999999);
+        let next_due = 2000u64;
+        let interval = 86400u64;
+        let schedule_id =
+            client.create_savings_schedule(&owner, &goal_id, &500, &next_due, &interval);
+
+        // Jump 3 full intervals past first due date
+        env.ledger().set_timestamp(next_due + interval * 3 + 500);
+        client.execute_due_savings_schedules();
+
+        let schedule = client.get_savings_schedule(&schedule_id).unwrap();
+        assert_eq!(
+            schedule.missed_count, 3,
+            "Three intervals skipped; missed_count must be 3"
+        );
+        assert!(
+            schedule.next_due > next_due + interval * 3,
+            "next_due must advance past all skipped intervals"
+        );
     }
 }

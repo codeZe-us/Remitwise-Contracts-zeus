@@ -16,6 +16,39 @@ The Insurance contract enables users to create and manage insurance policies, tr
 - Event emission for audit trails
 - Storage TTL management
 
+## Quickstart
+
+This section provides a minimal example of how to interact with the Insurance contract.
+
+**Gotchas:**
+- Amounts are specified in the lowest denomination (e.g., stroops for XLM).
+- The `pay_premium` function assumes authorization succeeds and sets `next_payment_date`. Ensure you handle asset transfers depending on your implementation.
+- `deactivate_policy` stops future premium calculations but cannot be reversed in the current implementation.
+
+### Write Example: Creating a Policy
+*Note: This is pseudo-code demonstrating the Soroban Rust SDK CLI or client approach.*
+```rust
+
+let policy_id = client.create_policy(
+    &owner_address,
+    &String::from_str(&env, "Life Insurance"),
+    &String::from_str(&env, "Life"),
+    &100_0000000,                            
+    &10000_0000000,                         
+    &String::from_str(&env, "XLM")          
+);
+
+```
+
+### Read Example: Fetching Active Policies
+```rust
+
+let limit = 10;
+let cursor = 0;
+let page = client.get_active_policies(&owner_address, &cursor, &limit);
+
+```
+
 ## API Reference
 
 ### Data Structures
@@ -83,8 +116,22 @@ Gets all active policies for an owner.
 **Parameters:**
 
 - `owner`: Address of the policy owner
+- `env`: Environment
 
 **Returns:** Vector of active InsurancePolicy structs
+
+#### `get_all_policies_for_owner(env, owner, cursor, limit) -> PolicyPage`
+
+Gets a paginated list of all policies (including inactive) for an owner.
+
+**Parameters:**
+
+- `owner`: Address of the policy owner
+- `cursor`: Starting ID (0 for first page)
+- `limit`: Maximum items per page
+- `env`: Environment
+
+**Returns:** `PolicyPage` struct with items, next_cursor, and count
 
 #### `get_total_monthly_premium(env, owner) -> i128`
 
@@ -140,6 +187,10 @@ let active_policies = insurance::get_active_policies(env, user_address);
 
 // Get total monthly premium
 let total_premium = insurance::get_total_monthly_premium(env, user_address);
+
+// Get all policies (history, paginated)
+let all_policies_page = insurance::get_all_policies_for_owner(env, user_address, 0, 10);
+let all_policies = all_policies_page.items;
 ```
 
 ## Events

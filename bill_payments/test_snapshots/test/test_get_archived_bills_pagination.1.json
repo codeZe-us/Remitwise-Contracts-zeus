@@ -55,6 +55,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -92,6 +95,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -129,6 +135,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -166,6 +175,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -203,6 +215,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -240,6 +255,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -471,6 +489,14 @@
                                   },
                                   {
                                     "key": {
+                                      "symbol": "currency"
+                                    },
+                                    "val": {
+                                      "string": "XLM"
+                                    }
+                                  },
+                                  {
+                                    "key": {
                                       "symbol": "id"
                                     },
                                     "val": {
@@ -527,6 +553,14 @@
                                     },
                                     "val": {
                                       "u64": 0
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "currency"
+                                    },
+                                    "val": {
+                                      "string": "XLM"
                                     }
                                   },
                                   {
@@ -591,6 +625,14 @@
                                   },
                                   {
                                     "key": {
+                                      "symbol": "currency"
+                                    },
+                                    "val": {
+                                      "string": "XLM"
+                                    }
+                                  },
+                                  {
+                                    "key": {
                                       "symbol": "id"
                                     },
                                     "val": {
@@ -647,6 +689,14 @@
                                     },
                                     "val": {
                                       "u64": 0
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "currency"
+                                    },
+                                    "val": {
+                                      "string": "XLM"
                                     }
                                   },
                                   {
@@ -711,6 +761,14 @@
                                   },
                                   {
                                     "key": {
+                                      "symbol": "currency"
+                                    },
+                                    "val": {
+                                      "string": "XLM"
+                                    }
+                                  },
+                                  {
+                                    "key": {
                                       "symbol": "id"
                                     },
                                     "val": {
@@ -767,6 +825,14 @@
                                     },
                                     "val": {
                                       "u64": 0
+                                    }
+                                  },
+                                  {
+                                    "key": {
+                                      "symbol": "currency"
+                                    },
+                                    "val": {
+                                      "string": "XLM"
                                     }
                                   },
                                   {
@@ -875,6 +941,26 @@
                             {
                               "key": {
                                 "symbol": "total_unpaid_amount"
+                              },
+                              "val": {
+                                "i128": {
+                                  "hi": 0,
+                                  "lo": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "UNPD_TOT"
+                        },
+                        "val": {
+                          "map": [
+                            {
+                              "key": {
+                                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
                               },
                               "val": {
                                 "i128": {
@@ -1476,6 +1562,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -1592,6 +1681,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -1708,6 +1800,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -1824,6 +1919,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -1940,6 +2038,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -2056,6 +2157,9 @@
                 },
                 {
                   "u32": 0
+                },
+                {
+                  "string": "XLM"
                 }
               ]
             }
@@ -2890,6 +2994,14 @@
                           },
                           {
                             "key": {
+                              "symbol": "currency"
+                            },
+                            "val": {
+                              "string": "XLM"
+                            }
+                          },
+                          {
+                            "key": {
                               "symbol": "id"
                             },
                             "val": {
@@ -2941,6 +3053,14 @@
                             },
                             "val": {
                               "u64": 0
+                            }
+                          },
+                          {
+                            "key": {
+                              "symbol": "currency"
+                            },
+                            "val": {
+                              "string": "XLM"
                             }
                           },
                           {
@@ -3000,6 +3120,14 @@
                           },
                           {
                             "key": {
+                              "symbol": "currency"
+                            },
+                            "val": {
+                              "string": "XLM"
+                            }
+                          },
+                          {
+                            "key": {
                               "symbol": "id"
                             },
                             "val": {
@@ -3051,6 +3179,14 @@
                             },
                             "val": {
                               "u64": 0
+                            }
+                          },
+                          {
+                            "key": {
+                              "symbol": "currency"
+                            },
+                            "val": {
+                              "string": "XLM"
                             }
                           },
                           {
@@ -3195,6 +3331,14 @@
                           },
                           {
                             "key": {
+                              "symbol": "currency"
+                            },
+                            "val": {
+                              "string": "XLM"
+                            }
+                          },
+                          {
+                            "key": {
                               "symbol": "id"
                             },
                             "val": {
@@ -3246,6 +3390,14 @@
                             },
                             "val": {
                               "u64": 0
+                            }
+                          },
+                          {
+                            "key": {
+                              "symbol": "currency"
+                            },
+                            "val": {
+                              "string": "XLM"
                             }
                           },
                           {

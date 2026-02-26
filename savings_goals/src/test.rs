@@ -43,6 +43,108 @@ fn test_create_goal_unique_ids() {
     assert_ne!(id1, id2);
 }
 
+// ============================================================================
+// init() idempotency and NEXT_ID behavior
+//
+// init() bootstraps storage (NEXT_ID and GOALS) only when keys are missing.
+// In production or integration, init() may be called more than once (e.g. by
+// different entrypoints or upgrade paths). These tests lock in that:
+// - A second init() must not remove or alter existing goals.
+// - NEXT_ID must not be reset by a second init(); the next created goal must
+//   receive the expected incremented ID (no reuse, no gaps).
+// ============================================================================
+
+/// Double init() must not remove or alter existing goals; next created goal
+/// must get the next ID (e.g. 2), not 1.
+#[test]
+fn test_init_idempotent_does_not_wipe_goals() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let owner_a = Address::generate(&env);
+
+    // First init on a fresh contract
+    client.init();
+
+    let name1 = String::from_str(&env, "First Goal");
+    let target1 = 5000i128;
+    let target_date1 = 2000000000u64;
+
+    let goal_id_1 = client.create_goal(&owner_a, &name1, &target1, &target_date1);
+    assert_eq!(goal_id_1, 1, "first goal must receive goal_id == 1");
+
+    // Simulate a second initialization attempt (e.g. from another entrypoint or upgrade)
+    client.init();
+
+    // Verify the existing goal is still present with same name, owner, amounts
+    let goal_after_second_init = client
+        .get_goal(&1)
+        .expect("goal 1 must still exist after second init()");
+    assert_eq!(goal_after_second_init.name, name1);
+    assert_eq!(goal_after_second_init.owner, owner_a);
+    assert_eq!(goal_after_second_init.target_amount, target1);
+    assert_eq!(goal_after_second_init.current_amount, 0);
+
+    let all_goals = client.get_all_goals(&owner_a);
+    assert_eq!(all_goals.len(), 1, "get_all_goals must still return the one goal");
+
+    // Verify NEXT_ID was not reset: next created goal must get goal_id == 2, not 1
+    let name2 = String::from_str(&env, "Second Goal");
+    let goal_id_2 = client.create_goal(&owner_a, &name2, &10000i128, &target_date1);
+    assert_eq!(
+        goal_id_2, 2,
+        "after second init(), next goal must get goal_id == 2, not 1 (NEXT_ID must not be reset)"
+    );
+}
+
+/// After init(), creating goals sequentially must yield IDs 1, 2, 3, ... with
+/// no gaps or reuse.
+#[test]
+fn test_next_id_increments_sequentially() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let owner = Address::generate(&env);
+
+    client.init();
+
+    let ids = [
+        client.create_goal(
+            &owner,
+            &String::from_str(&env, "G1"),
+            &1000i128,
+            &2000000000u64,
+        ),
+        client.create_goal(
+            &owner,
+            &String::from_str(&env, "G2"),
+            &2000i128,
+            &2000000000u64,
+        ),
+        client.create_goal(
+            &owner,
+            &String::from_str(&env, "G3"),
+            &3000i128,
+            &2000000000u64,
+        ),
+    ];
+
+    assert_eq!(ids[0], 1, "first goal id must be 1");
+    assert_eq!(ids[1], 2, "second goal id must be 2");
+    assert_eq!(ids[2], 3, "third goal id must be 3");
+
+    for (i, &id) in ids.iter().enumerate() {
+        let goal = client.get_goal(&id).unwrap();
+        assert_eq!(goal.id, id);
+        let expected_name = String::from_str(&env, &format!("G{}", i + 1));
+        assert_eq!(goal.name, expected_name);
+    }
+}
+
 #[test]
 fn test_add_to_goal_increments() {
     let env = Env::default();
@@ -1271,4 +1373,323 @@ fn test_instance_ttl_extended_on_lock_goal() {
         "Instance TTL ({}) must be >= 518,400 after lock_goal",
         ttl
     );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Time & Ledger Drift Resilience Tests (#158)
+//
+// Assumptions documented here:
+//  - Stellar ledger timestamps are monotonically increasing in production.
+//  - is_goal_completed checks current_amount >= target_amount only; the
+//    target_date field is informational and does not affect completion.
+//  - execute_due_savings_schedules fires a schedule when
+//    current_time >= schedule.next_due (inclusive boundary).
+//  - After execution, next_due advances by the interval, preventing
+//    re-execution even if ledger time were to regress (non-monotonic drift).
+// ══════════════════════════════════════════════════════════════════════════
+
+/// Passing target_date has no effect on is_goal_completed; the check is
+/// purely current_amount vs target_amount.
+#[test]
+fn test_time_drift_is_goal_completed_depends_on_amount_not_time() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+
+    env.mock_all_auths();
+    let target_date = 5000u64;
+    set_time(&env, 1000);
+
+    let goal_id = client.create_goal(
+        &owner,
+        &String::from_str(&env, "Vacation"),
+        &10000,
+        &target_date,
+    );
+
+    // Under-funded before target_date
+    assert!(!client.is_goal_completed(&goal_id));
+
+    // Advance ledger to exactly target_date – still under-funded
+    set_time(&env, target_date);
+    assert!(!client.is_goal_completed(&goal_id));
+
+    // Advance ledger past target_date – still under-funded
+    set_time(&env, target_date + 1);
+    assert!(!client.is_goal_completed(&goal_id));
+
+    // Fund the goal fully after the deadline
+    client.add_to_goal(&owner, &goal_id, &10000);
+    assert!(
+        client.is_goal_completed(&goal_id),
+        "Goal must complete on amount alone, regardless of time"
+    );
+}
+
+/// Goal completes as soon as funding is sufficient, even far before target_date.
+#[test]
+fn test_time_drift_is_goal_completed_early_funding() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+
+    env.mock_all_auths();
+    set_time(&env, 100);
+
+    let goal_id = client.create_goal(
+        &owner,
+        &String::from_str(&env, "Emergency Fund"),
+        &5000,
+        &9_999_999, // far-future target_date
+    );
+
+    assert!(!client.is_goal_completed(&goal_id));
+    client.add_to_goal(&owner, &goal_id, &5000);
+    assert!(
+        client.is_goal_completed(&goal_id),
+        "Goal must complete before target_date when amount is reached"
+    );
+}
+
+/// Schedule must NOT execute one second before next_due and MUST execute
+/// exactly at next_due (inclusive boundary).
+#[test]
+fn test_time_drift_schedule_executes_at_exact_next_due() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+
+    env.mock_all_auths();
+    set_time(&env, 1000);
+
+    let goal_id = client.create_goal(
+        &owner,
+        &String::from_str(&env, "House"),
+        &50000,
+        &200000,
+    );
+    let next_due = 3000u64;
+    let schedule_id = client.create_savings_schedule(&owner, &goal_id, &500, &next_due, &86400);
+
+    // One second before due: must NOT execute
+    set_time(&env, next_due - 1);
+    let executed = client.execute_due_savings_schedules();
+    assert_eq!(
+        executed.len(),
+        0,
+        "Schedule must not execute one second before next_due"
+    );
+    let goal = client.get_goal(&goal_id).unwrap();
+    assert_eq!(goal.current_amount, 0, "No funds added before due date");
+
+    // Exactly at next_due: must execute
+    set_time(&env, next_due);
+    let executed = client.execute_due_savings_schedules();
+    assert_eq!(executed.len(), 1, "Schedule must execute exactly at next_due");
+    assert_eq!(executed.get(0).unwrap(), schedule_id);
+    let goal = client.get_goal(&goal_id).unwrap();
+    assert_eq!(goal.current_amount, 500);
+}
+
+/// After execution next_due advances; a subsequent call at a time still
+/// before the new next_due must not re-execute the schedule.
+/// Documents non-monotonic time assumption: next_due guards re-runs.
+#[test]
+fn test_time_drift_no_double_execution_after_next_due_advances() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+
+    env.mock_all_auths();
+    set_time(&env, 1000);
+
+    let goal_id = client.create_goal(
+        &owner,
+        &String::from_str(&env, "Car"),
+        &20000,
+        &999999,
+    );
+    let next_due = 5000u64;
+    let interval = 86400u64;
+    client.create_savings_schedule(&owner, &goal_id, &1000, &next_due, &interval);
+
+    // Execute at next_due – schedule advances to next_due + interval
+    set_time(&env, next_due);
+    let executed = client.execute_due_savings_schedules();
+    assert_eq!(executed.len(), 1);
+
+    // Time between old next_due and new next_due: no re-execution
+    // (In production ledger time is monotonic; this also covers the case
+    //  where execute is called repeatedly within the same window.)
+    set_time(&env, next_due + 100);
+    let executed_again = client.execute_due_savings_schedules();
+    assert_eq!(
+        executed_again.len(),
+        0,
+        "Schedule must not re-execute before the new next_due"
+    );
+
+    let goal = client.get_goal(&goal_id).unwrap();
+    assert_eq!(goal.current_amount, 1000, "Funds must be added exactly once");
+}
+
+/// A large forward jump past multiple intervals marks the correct missed_count
+/// and advances next_due beyond all skipped intervals.
+#[test]
+fn test_time_drift_large_jump_marks_missed_count() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+
+    env.mock_all_auths();
+    set_time(&env, 1000);
+
+    let goal_id = client.create_goal(
+        &owner,
+        &String::from_str(&env, "Tuition"),
+        &50000,
+        &9999999,
+    );
+    let next_due = 2000u64;
+    let interval = 86400u64;
+    let schedule_id = client.create_savings_schedule(&owner, &goal_id, &500, &next_due, &interval);
+
+    // Jump 3 full intervals past first due date
+    set_time(&env, next_due + interval * 3 + 500);
+    client.execute_due_savings_schedules();
+
+    let schedule = client.get_savings_schedule(&schedule_id).unwrap();
+    assert_eq!(
+        schedule.missed_count, 3,
+        "Three intervals were skipped; missed_count must be 3"
+    );
+    assert!(
+        schedule.next_due > next_due + interval * 3,
+        "next_due must have advanced past all skipped intervals"
+    );
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Auth, InvalidAction)")]
+fn test_add_to_goal_non_owner_auth_failure() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let user = Address::generate(&env);
+    let other = Address::generate(&env);
+
+    client.init();
+    client.mock_auths(&[soroban_sdk::testutils::MockAuth {
+        address: &user,
+        invoke: &soroban_sdk::testutils::MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "create_goal",
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+
+    let id = client.create_goal(&user, &String::from_str(&env, "Auth"), &1000, &2000000000);
+    client.add_to_goal(&other, &id, &500);
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Auth, InvalidAction)")]
+fn test_withdraw_from_goal_non_owner_auth_failure() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let user = Address::generate(&env);
+    let other = Address::generate(&env);
+
+    client.init();
+    client.mock_auths(&[soroban_sdk::testutils::MockAuth {
+        address: &user,
+        invoke: &soroban_sdk::testutils::MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "create_goal",
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+
+    let id = client.create_goal(&user, &String::from_str(&env, "Auth"), &1000, &2000000000);
+    client.withdraw_from_goal(&other, &id, &100);
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Auth, InvalidAction)")]
+fn test_lock_goal_non_owner_auth_failure() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let user = Address::generate(&env);
+    let other = Address::generate(&env);
+
+    client.init();
+    client.mock_auths(&[soroban_sdk::testutils::MockAuth {
+        address: &user,
+        invoke: &soroban_sdk::testutils::MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "create_goal",
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+
+    let id = client.create_goal(&user, &String::from_str(&env, "Auth"), &1000, &2000000000);
+    client.lock_goal(&other, &id);
+}
+
+#[test]
+#[should_panic(expected = "HostError: Error(Auth, InvalidAction)")]
+fn test_unlock_goal_non_owner_auth_failure() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, SavingsGoalContract);
+    let client = SavingsGoalContractClient::new(&env, &contract_id);
+    let user = Address::generate(&env);
+    let other = Address::generate(&env);
+
+    client.init();
+    client.mock_auths(&[soroban_sdk::testutils::MockAuth {
+        address: &user,
+        invoke: &soroban_sdk::testutils::MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "create_goal",
+            args: (
+                &user,
+                String::from_str(&env, "Auth"),
+                1000i128,
+                2000000000u64,
+            )
+                .into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+
+    let id = client.create_goal(&user, &String::from_str(&env, "Auth"), &1000, &2000000000);
+    client.unlock_goal(&other, &id);
 }

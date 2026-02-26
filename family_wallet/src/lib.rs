@@ -4,6 +4,8 @@ use soroban_sdk::{
     Env, Map, Symbol, Vec,
 };
 
+use remitwise_common::FamilyRole;
+
 // Storage TTL constants for active data
 const INSTANCE_LIFETIME_THRESHOLD: u32 = 17280;
 const INSTANCE_BUMP_AMOUNT: u32 = 518400;
@@ -25,16 +27,6 @@ pub enum TransactionType {
     EmergencyTransfer = 4,
     PolicyCancellation = 5,
     RegularWithdrawal = 6,
-}
-
-#[contracttype]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u32)]
-pub enum FamilyRole {
-    Owner = 1,
-    Admin = 2,
-    Member = 3,
-    Viewer = 4,
 }
 
 #[contracttype]
@@ -451,7 +443,9 @@ impl FamilyWallet {
             panic!("Only Owner or Admin can configure multi-sig");
         }
 
-        if threshold == 0 || threshold > signers.len() {
+        // Validate threshold
+        let signer_count = signers.len();
+        if threshold == 0 || threshold > signer_count {
             panic!("Invalid threshold");
         }
 
@@ -469,7 +463,7 @@ impl FamilyWallet {
 
         let config = MultiSigConfig {
             threshold,
-            signers: signers.clone(),
+            signers,
             spending_limit,
         };
 
