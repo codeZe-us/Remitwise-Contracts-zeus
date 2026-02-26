@@ -35,6 +35,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
 
         assert_eq!(bill_id, 1);
@@ -44,6 +46,7 @@ mod testsuit {
         let bill = bill.unwrap();
         assert_eq!(bill.amount, 1000);
         assert!(!bill.paid);
+        assert!(bill.external_ref.is_none());
     }
 
     #[test]
@@ -61,6 +64,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
 
         assert_eq!(result, Err(Ok(Error::InvalidAmount)));
@@ -81,6 +86,8 @@ mod testsuit {
             &1000000,
             &true,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
 
         assert_eq!(result, Err(Ok(Error::InvalidFrequency)));
@@ -101,6 +108,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
 
         assert_eq!(result, Err(Ok(Error::InvalidAmount)));
@@ -121,6 +130,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
 
         env.mock_all_auths();
@@ -146,6 +157,8 @@ mod testsuit {
             &1000000,
             &true,
             &30,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
 
         env.mock_all_auths();
@@ -177,6 +190,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.create_bill(
@@ -186,6 +201,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.create_bill(
@@ -195,6 +212,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.pay_bill(&owner, &1);
@@ -217,6 +236,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.create_bill(
@@ -226,6 +247,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.create_bill(
@@ -235,6 +258,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.pay_bill(&owner, &1);
@@ -269,6 +294,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.pay_bill(&owner, &bill_id);
@@ -293,6 +320,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.create_bill(
@@ -302,6 +331,8 @@ mod testsuit {
             &1500000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.create_bill(
@@ -311,6 +342,8 @@ mod testsuit {
             &3000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
 
         let overdue = client.get_overdue_bills(&owner);
@@ -331,6 +364,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         client.cancel_bill(&owner, &bill_id);
@@ -393,6 +428,60 @@ mod testsuit {
     }
 
     #[test]
+    fn test_set_external_ref_success() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, BillPayments);
+        let client = BillPaymentsClient::new(&env, &contract_id);
+        let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+
+        env.mock_all_auths();
+        let bill_id = client.create_bill(
+            &owner,
+            &String::from_str(&env, "Internet"),
+            &150,
+            &1000000,
+            &false,
+            &0,
+            &None,
+        );
+
+        let ref_id = Some(String::from_str(&env, "BILL-EXT-123"));
+        env.mock_all_auths();
+        client.set_external_ref(&owner, &bill_id, &ref_id);
+
+        let bill = client.get_bill(&bill_id).unwrap();
+        assert_eq!(bill.external_ref, ref_id);
+    }
+
+    #[test]
+    fn test_set_external_ref_unauthorized() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, BillPayments);
+        let client = BillPaymentsClient::new(&env, &contract_id);
+        let owner = <soroban_sdk::Address as AddressTrait>::generate(&env);
+        let other = <soroban_sdk::Address as AddressTrait>::generate(&env);
+
+        env.mock_all_auths();
+        let bill_id = client.create_bill(
+            &owner,
+            &String::from_str(&env, "Internet"),
+            &150,
+            &1000000,
+            &false,
+            &0,
+            &None,
+        );
+
+        env.mock_all_auths();
+        let result = client.try_set_external_ref(
+            &other,
+            &bill_id,
+            &Some(String::from_str(&env, "BILL-EXT-123")),
+        );
+        assert_eq!(result, Err(Ok(Error::Unauthorized)));
+    }
+
+    #[test]
     fn test_multiple_recurring_payments() {
         let env = Env::default();
         let contract_id = env.register_contract(None, BillPayments);
@@ -407,6 +496,8 @@ mod testsuit {
             &1000000,
             &true,
             &30,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         env.mock_all_auths();
         // Pay first bill - creates second
@@ -443,6 +534,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         client.create_bill(
             &owner,
@@ -451,6 +544,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         client.create_bill(
             &owner,
@@ -459,6 +554,8 @@ mod testsuit {
             &1000000,
             &false,
             &0,
+            &None,
+                    &String::from_str(&env, "XLM"),
         );
         client.pay_bill(&owner, &1);
 

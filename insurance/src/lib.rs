@@ -86,6 +86,8 @@ pub struct InsurancePolicy {
     pub id: u32,
     pub owner: Address,
     pub name: String,
+    pub external_ref: Option<String>,
+    pub coverage_type: String,
     pub coverage_type: CoverageType,
     pub monthly_premium: i128,
     pub coverage_amount: i128,
@@ -144,6 +146,7 @@ pub enum InsuranceEvent {
     PolicyCreated,
     PremiumPaid,
     PolicyDeactivated,
+    ExternalRefUpdated,
     ScheduleCreated,
     ScheduleExecuted,
     ScheduleMissed,
@@ -156,6 +159,37 @@ pub struct Insurance;
 
 #[contractimpl]
 impl Insurance {
+    /// Create a new insurance policy
+    ///
+    /// # Arguments
+    /// * `owner` - Address of the policy owner (must authorize)
+    /// * `name` - Name of the policy
+    /// * `coverage_type` - Type of coverage (e.g., "health", "emergency")
+    /// * `monthly_premium` - Monthly premium amount (must be positive)
+    /// * `coverage_amount` - Total coverage amount (must be positive)
+    /// * `external_ref` - Optional external system reference ID
+    ///
+    /// # Returns
+    /// The ID of the created policy
+    ///
+    /// # Panics
+    /// - If owner doesn't authorize the transaction
+    /// - If monthly_premium is not positive
+    /// - If coverage_amount is not positive
+    // -----------------------------------------------------------------------
+    // Internal helpers
+    // -----------------------------------------------------------------------
+
+    fn clamp_limit(limit: u32) -> u32 {
+        if limit == 0 {
+            DEFAULT_PAGE_LIMIT
+        } else if limit > MAX_PAGE_LIMIT {
+            MAX_PAGE_LIMIT
+        } else {
+            limit
+        }
+    }
+
     fn get_pause_admin(env: &Env) -> Option<Address> {
         env.storage().instance().get(&symbol_short!("PAUSE_ADM"))
     }
@@ -463,6 +497,8 @@ impl Insurance {
         coverage_type: CoverageType,
         monthly_premium: i128,
         coverage_amount: i128,
+        external_ref: Option<String>,
+    ) -> u32 {
     ) -> Result<u32, InsuranceError> {
         owner.require_auth();
         Self::require_not_paused(&env, pause_functions::CREATE_POLICY)?;
@@ -492,6 +528,7 @@ impl Insurance {
             id: next_id,
             owner: owner.clone(),
             name: name.clone(),
+            external_ref,
             coverage_type: coverage_type.clone(),
             monthly_premium,
             coverage_amount,
@@ -501,6 +538,8 @@ impl Insurance {
             tags: Vec::new(&env),
         };
 
+        let policy_owner = policy.owner.clone();
+        let policy_external_ref = policy.external_ref.clone();
         policies.set(next_id, policy);
         env.storage()
             .instance()
@@ -524,6 +563,7 @@ impl Insurance {
 
         env.events().publish(
             (symbol_short!("insure"), InsuranceEvent::PolicyCreated),
+            (next_id, policy_owner, policy_external_ref),
             (next_id, owner),
         );
 
@@ -570,6 +610,18 @@ impl Insurance {
         }
 
         policy.next_payment_date = env.ledger().timestamp() + (30 * 86400);
+
+        let policy_external_ref = policy.external_ref.clone();
+        let event = PremiumPaidEvent {
+            policy_id,
+            name: policy.name.clone(),
+            amount: policy.monthly_premium,
+            next_payment_date: policy.next_payment_date,
+            timestamp: env.ledger().timestamp(),
+        };
+        env.events().publish((PREMIUM_PAID,), event);
+
+        policies.set(policy_id, policy);
         policies.set(policy_id, policy.clone());
         env.storage()
             .instance()
@@ -588,7 +640,7 @@ impl Insurance {
 
         env.events().publish(
             (symbol_short!("insure"), InsuranceEvent::PremiumPaid),
-            (policy_id, caller),
+            (policy_id, caller, policy_external_ref),
         );
 
         Ok(())
@@ -757,6 +809,8 @@ impl Insurance {
 
         let was_active = policy.active;
         policy.active = false;
+        let policy_external_ref = policy.external_ref.clone();
+        policies.set(policy_id, policy);
         let premium_amount = policy.monthly_premium;
         policies.set(policy_id, policy.clone());
         env.storage()
@@ -774,6 +828,55 @@ impl Insurance {
         env.events().publish((POLICY_DEACTIVATED,), event);
         env.events().publish(
             (symbol_short!("insure"), InsuranceEvent::PolicyDeactivated),
+            (policy_id, caller, policy_external_ref),
+        );
+
+        true
+    }
+
+    /// Set or clear an external reference ID for a policy
+    ///
+    /// # Arguments
+    /// * `caller` - Address of the caller (must be the policy owner)
+    /// * `policy_id` - ID of the policy
+    /// * `external_ref` - Optional external system reference ID
+    ///
+    /// # Returns
+    /// True if the reference update was successful
+    ///
+    /// # Panics
+    /// - If caller is not the policy owner
+    /// - If policy is not found
+    pub fn set_external_ref(
+        env: Env,
+        caller: Address,
+        policy_id: u32,
+        external_ref: Option<String>,
+    ) -> bool {
+        caller.require_auth();
+
+        Self::extend_instance_ttl(&env);
+        let mut policies: Map<u32, InsurancePolicy> = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("POLICIES"))
+            .unwrap_or_else(|| Map::new(&env));
+
+        let mut policy = policies.get(policy_id).expect("Policy not found");
+        if policy.owner != caller {
+            panic!("Only the policy owner can update this policy reference");
+        }
+
+        policy.external_ref = external_ref.clone();
+        policies.set(policy_id, policy);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("POLICIES"), &policies);
+
+        env.events().publish(
+            (symbol_short!("insure"), InsuranceEvent::ExternalRefUpdated),
+            (policy_id, caller, external_ref),
+            (symbol_short!("insuranc"), InsuranceEvent::PolicyDeactivated),
             (policy_id, caller),
         );
 
@@ -826,6 +929,20 @@ impl Insurance {
         owner.require_auth();
         Self::require_not_paused(&env, pause_functions::CREATE_SCHED)?;
 
+        let name = String::from_str(&env, "Health Insurance");
+        let coverage_type = String::from_str(&env, "health");
+        let monthly_premium = 100;
+        let coverage_amount = 10000;
+        let external_ref = Some(String::from_str(&env, "POLICY-EXT-1"));
+
+        let policy_id = client.create_policy(
+            &owner,
+            &name,
+            &coverage_type,
+            &monthly_premium,
+            &coverage_amount,
+            &external_ref,
+        );
         let mut policies: Map<u32, InsurancePolicy> = env
             .storage()
             .instance()
@@ -840,6 +957,17 @@ impl Insurance {
             return Err(InsuranceError::Unauthorized);
         }
 
+        let policy = client.get_policy(&policy_id).unwrap();
+        assert_eq!(policy.id, 1);
+        assert_eq!(policy.owner, owner);
+        assert_eq!(policy.name, name);
+        assert_eq!(policy.external_ref, external_ref);
+        assert_eq!(policy.coverage_type, coverage_type);
+        assert_eq!(policy.monthly_premium, monthly_premium);
+        assert_eq!(policy.coverage_amount, coverage_amount);
+        assert!(policy.active);
+        assert_eq!(policy.next_payment_date, 1000000000 + (30 * 86400));
+    }
         let current_time = env.ledger().timestamp();
         if next_due <= current_time {
             return Err(InsuranceError::InvalidTimestamp);
@@ -853,6 +981,8 @@ impl Insurance {
             .get(&symbol_short!("PREM_SCH"))
             .unwrap_or_else(|| Map::new(&env));
 
+        client.create_policy(&owner, &name, &coverage_type, &0, &10000, &None);
+    }
         let next_schedule_id = env
             .storage()
             .instance()
@@ -875,6 +1005,8 @@ impl Insurance {
 
         policy.schedule_id = Some(next_schedule_id);
 
+        client.create_policy(&owner, &name, &coverage_type, &-100, &10000, &None);
+    }
         schedules.set(next_schedule_id, schedule);
         env.storage()
             .instance()
@@ -1134,6 +1266,16 @@ mod test_events {
         let contract_id = env.register_contract(None, Insurance);
         let client = InsuranceClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
+
+        let page = client.get_active_policies(&owner, &0, &0);
+        assert_eq!(page.count, 0);
+        assert_eq!(page.next_cursor, 0);
+    }
+
+        client.create_policy(&owner, &name, &coverage_type, &100, &0, &None);
+    #[test]
+    fn test_get_active_policies_single_page() {
+        let env = make_env();
         env.mock_all_auths();
 
         // Use the .try_ version of the function to capture the error result
@@ -1179,6 +1321,23 @@ mod test_events {
         let client = InsuranceClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
 
+        let name = String::from_str(&env, "Health Insurance");
+        let coverage_type = String::from_str(&env, "health");
+        let policy_id = client.create_policy(&owner, &name, &coverage_type, &100, &10000, &None);
+        setup_policies(&env, &client, &owner, 7);
+
+        let page1 = client.get_active_policies(&owner, &0, &3);
+        assert_eq!(page1.count, 3);
+        assert!(page1.next_cursor > 0);
+
+        let page2 = client.get_active_policies(&owner, &page1.next_cursor, &3);
+        assert_eq!(page2.count, 3);
+        assert!(page2.next_cursor > 0);
+
+        let page3 = client.get_active_policies(&owner, &page2.next_cursor, &3);
+        assert_eq!(page3.count, 1);
+        assert_eq!(page3.next_cursor, 0);
+    }
         // Create a policy
         let policy_id = client.create_policy(
             &owner,
@@ -1190,6 +1349,28 @@ mod test_events {
 
         env.mock_all_auths();
 
+        let name = String::from_str(&env, "Health Insurance");
+        let coverage_type = String::from_str(&env, "health");
+        let policy_id = client.create_policy(&owner, &name, &coverage_type, &100, &10000, &None);
+        let ids = setup_policies(&env, &client, &owner, 4);
+        // Deactivate policy #2
+        client.deactivate_policy(&owner, &ids.get(1).unwrap());
+
+        let page = client.get_active_policies(&owner, &0, &10);
+        assert_eq!(page.count, 3); // only 3 active
+        for p in page.items.iter() {
+            assert!(p.active, "only active policies should be returned");
+        }
+    }
+
+    #[test]
+    fn test_get_active_policies_multi_owner_isolation() {
+        let env = make_env();
+        env.mock_all_auths();
+        let id = env.register_contract(None, Insurance);
+        let client = InsuranceClient::new(&env, &id);
+        let owner_a = Address::generate(&env);
+        let owner_b = Address::generate(&env);
         // Get events before paying premium
         let events_before = env.events().all().len();
 
@@ -1242,6 +1423,18 @@ mod test_events {
         let owner = Address::generate(&env);
 
         // Create multiple policies
+        let name1 = String::from_str(&env, "Health Insurance");
+        let coverage_type1 = String::from_str(&env, "health");
+        let policy_id1 = client.create_policy(&owner, &name1, &coverage_type1, &100, &10000, &None);
+
+        let name2 = String::from_str(&env, "Emergency Insurance");
+        let coverage_type2 = String::from_str(&env, "emergency");
+        let policy_id2 = client.create_policy(&owner, &name2, &coverage_type2, &200, &20000, &None);
+
+        let name3 = String::from_str(&env, "Life Insurance");
+        let coverage_type3 = String::from_str(&env, "life");
+        let policy_id3 = client.create_policy(&owner, &name3, &coverage_type3, &300, &30000, &None);
+        let policy_id = client.create_policy(
         client.create_policy(
             &owner,
             &String::from_str(&env, "Health Insurance"),
@@ -1280,6 +1473,18 @@ mod test_events {
         let client = InsuranceClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
 
+        // Create multiple policies
+        let name1 = String::from_str(&env, "Health Insurance");
+        let coverage_type1 = String::from_str(&env, "health");
+        client.create_policy(&owner, &name1, &coverage_type1, &100, &10000, &None);
+
+        let name2 = String::from_str(&env, "Emergency Insurance");
+        let coverage_type2 = String::from_str(&env, "emergency");
+        client.create_policy(&owner, &name2, &coverage_type2, &200, &20000, &None);
+
+        let name3 = String::from_str(&env, "Life Insurance");
+        let coverage_type3 = String::from_str(&env, "life");
+        let policy_id3 = client.create_policy(&owner, &name3, &coverage_type3, &300, &30000, &None);
         // Create a policy
         let policy_id = client.create_policy(
             &owner,
@@ -1340,6 +1545,12 @@ mod test_events {
         let client = InsuranceClient::new(&env, &contract_id);
         let owner = Address::generate(&env);
 
+        let name = String::from_str(&env, "Health Insurance");
+        let coverage_type = String::from_str(&env, "health");
+        let policy_id = client.create_policy(&owner, &name, &coverage_type, &100, &10000, &None);
+
+        let result = client.deactivate_policy(&owner, &policy_id);
+        assert!(result);
         // create_policy calls extend_instance_ttl
         let policy_id = client.create_policy(
             &owner,
@@ -1418,6 +1629,46 @@ mod test_events {
     /// Verify data persists across repeated operations spanning multiple
     /// ledger advancements, proving TTL is continuously renewed.
     #[test]
+    fn test_set_external_ref_success() {
+        let env = create_test_env();
+        let contract_id = env.register_contract(None, Insurance);
+        let client = InsuranceClient::new(&env, &contract_id);
+        let owner = Address::generate(&env);
+
+        let name = String::from_str(&env, "Health Insurance");
+        let coverage_type = String::from_str(&env, "health");
+        let policy_id = client.create_policy(&owner, &name, &coverage_type, &100, &10000, &None);
+
+        let external_ref = Some(String::from_str(&env, "POLICY-EXT-99"));
+        assert!(client.set_external_ref(&owner, &policy_id, &external_ref));
+
+        let policy = client.get_policy(&policy_id).unwrap();
+        assert_eq!(policy.external_ref, external_ref);
+    }
+
+    #[test]
+    #[should_panic(expected = "Only the policy owner can update this policy reference")]
+    fn test_set_external_ref_unauthorized() {
+        let env = create_test_env();
+        let contract_id = env.register_contract(None, Insurance);
+        let client = InsuranceClient::new(&env, &contract_id);
+        let owner = Address::generate(&env);
+        let other = Address::generate(&env);
+
+        let name = String::from_str(&env, "Health Insurance");
+        let coverage_type = String::from_str(&env, "health");
+        let policy_id = client.create_policy(&owner, &name, &coverage_type, &100, &10000, &None);
+
+        client.set_external_ref(
+            &other,
+            &policy_id,
+            &Some(String::from_str(&env, "POLICY-EXT-99")),
+        );
+    }
+
+    #[test]
+    fn test_multiple_policies_management() {
+        let env = create_test_env();
     fn test_policy_data_persists_across_ledger_advancements() {
         let env = Env::default();
         env.mock_all_auths();
@@ -1446,6 +1697,19 @@ mod test_events {
             &75000,
         );
 
+        for (i, policy_name) in policy_names.iter().enumerate() {
+            let premium = ((i + 1) as i128) * 100;
+            let coverage = ((i + 1) as i128) * 10000;
+            let policy_id = client.create_policy(
+                &owner,
+                policy_name,
+                &coverage_type,
+                &premium,
+                &coverage,
+                &None,
+            );
+            policy_ids.push_back(policy_id);
+        }
         // Phase 2: Advance to seq 510,000 (TTL = 8,500 < 17,280)
         env.ledger().set(LedgerInfo {
             protocol_version: 20,
@@ -1570,6 +1834,11 @@ mod test_events {
         // 1. Create a policy
         let policy_id = client.create_policy(
             &owner,
+            &name,
+            &coverage_type,
+            &monthly_premium,
+            &coverage_amount,
+            &None,
             &String::from_str(&env, "Health Plan"),
             &CoverageType::Health,
             &150,

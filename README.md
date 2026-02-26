@@ -307,6 +307,7 @@ Manages goal-based savings with target dates.
 Tracks and manages bill payments with recurring support.
 
 **Key Functions:**
+- `create_bill`: Create a new bill (electricity, school fees, etc.) with optional `external_ref`
 
 - `create_bill`: Create a new bill (electricity, school fees, etc.)
 - `pay_bill`: Mark a bill as paid and create next recurring bill if applicable
@@ -333,6 +334,7 @@ Tracks and manages bill payments with recurring support.
 Manages micro-insurance policies and premium payments.
 
 **Key Functions:**
+- `create_policy`: Create a new insurance policy with optional `external_ref`
 
 - `create_policy`: Create a new insurance policy
 - `pay_premium`: Pay monthly premium
@@ -341,6 +343,9 @@ Manages micro-insurance policies and premium payments.
 - `get_total_monthly_premium`: Calculate total monthly premium cost
 - `deactivate_policy`: Deactivate an insurance policy
 
+Bill and insurance events include `external_ref` where applicable for off-chain linking.
+
+### Family Wallet
 **Events:**
 
 - `PolicyCreatedEvent`: Emitted when a new insurance policy is created

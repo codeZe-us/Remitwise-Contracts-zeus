@@ -19,6 +19,7 @@ pub struct Bill {
     pub id: u32,
     pub owner: Address,
     pub name: String,
+    pub external_ref: Option<String>,
     pub amount: i128,
     pub due_date: u64,
     pub recurring: bool,
@@ -105,6 +106,10 @@ pub struct ArchivedBillPage {
 
 #[contracttype]
 #[derive(Clone)]
+pub enum BillEvent {
+    Created,
+    Paid,
+    ExternalRefUpdated,
 pub struct StorageStats {
     pub active_bills: u32,
     pub archived_bills: u32,
@@ -118,6 +123,23 @@ pub struct BillPayments;
 
 #[contractimpl]
 impl BillPayments {
+    /// Create a new bill
+    ///
+    /// # Arguments
+    /// * `owner` - Address of the bill owner (must authorize)
+    /// * `name` - Name of the bill (e.g., "Electricity", "School Fees")
+    /// * `amount` - Amount to pay (must be positive)
+    /// * `due_date` - Due date as Unix timestamp
+    /// * `recurring` - Whether this is a recurring bill
+    /// * `frequency_days` - Frequency in days for recurring bills (must be > 0 if recurring)
+    /// * `external_ref` - Optional external system reference ID
+    ///
+    /// # Returns
+    /// The ID of the created bill
+    ///
+    /// # Errors
+    /// * `InvalidAmount` - If amount is zero or negative
+    /// * `InvalidFrequency` - If recurring is true but frequency_days is 0
     // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
@@ -352,6 +374,7 @@ impl BillPayments {
         due_date: u64,
         recurring: bool,
         frequency_days: u32,
+        external_ref: Option<String>,
         currency: String,
     ) -> Result<u32, Error> {
         owner.require_auth();
@@ -390,6 +413,7 @@ impl BillPayments {
             id: next_id,
             owner: owner.clone(),
             name: name.clone(),
+            external_ref,
             amount,
             due_date,
             recurring,
@@ -402,6 +426,7 @@ impl BillPayments {
         };
 
         let bill_owner = bill.owner.clone();
+        let bill_external_ref = bill.external_ref.clone();
         bills.set(next_id, bill);
         env.storage()
             .instance()
@@ -411,6 +436,10 @@ impl BillPayments {
             .set(&symbol_short!("NEXT_ID"), &next_id);
         Self::adjust_unpaid_total(&env, &bill_owner, amount);
 
+        // Emit event for audit trail
+        env.events().publish(
+            (symbol_short!("bill"), BillEvent::Created),
+            (next_id, bill_owner, bill_external_ref),
         RemitwiseEvents::emit(
             &env,
             EventCategory::State,
@@ -459,6 +488,7 @@ impl BillPayments {
                 id: next_id,
                 owner: bill.owner.clone(),
                 name: bill.name.clone(),
+                external_ref: bill.external_ref.clone(),
                 amount: bill.amount,
                 due_date: next_due_date,
                 recurring: true,
@@ -475,6 +505,7 @@ impl BillPayments {
                 .set(&symbol_short!("NEXT_ID"), &next_id);
         }
 
+        let bill_external_ref = bill.external_ref.clone();
         let paid_amount = bill.amount;
         let was_recurring = bill.recurring;
         bills.set(bill_id, bill);
@@ -485,6 +516,10 @@ impl BillPayments {
             Self::adjust_unpaid_total(&env, &caller, -paid_amount);
         }
 
+        // Emit event for audit trail
+        env.events().publish(
+            (symbol_short!("bill"), BillEvent::Paid),
+            (bill_id, caller, bill_external_ref),
         RemitwiseEvents::emit(
             &env,
             EventCategory::Transaction,
@@ -669,6 +704,58 @@ impl BillPayments {
         }
     }
 
+    /// Set or clear an external reference ID for a bill
+    ///
+    /// # Arguments
+    /// * `caller` - Address of the caller (must be the bill owner)
+    /// * `bill_id` - ID of the bill to update
+    /// * `external_ref` - Optional external system reference ID
+    ///
+    /// # Returns
+    /// Ok(()) if update was successful
+    ///
+    /// # Errors
+    /// * `BillNotFound` - If bill with given ID doesn't exist
+    /// * `Unauthorized` - If caller is not the bill owner
+    pub fn set_external_ref(
+        env: Env,
+        caller: Address,
+        bill_id: u32,
+        external_ref: Option<String>,
+    ) -> Result<(), Error> {
+        caller.require_auth();
+
+        Self::extend_instance_ttl(&env);
+        let mut bills: Map<u32, Bill> = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("BILLS"))
+            .unwrap_or_else(|| Map::new(&env));
+
+        let mut bill = bills.get(bill_id).ok_or(Error::BillNotFound)?;
+        if bill.owner != caller {
+            return Err(Error::Unauthorized);
+        }
+
+        bill.external_ref = external_ref.clone();
+        bills.set(bill_id, bill);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("BILLS"), &bills);
+
+        env.events().publish(
+            (symbol_short!("bill"), BillEvent::ExternalRefUpdated),
+            (bill_id, caller, external_ref),
+        );
+
+        Ok(())
+    }
+
+    /// Get all bills (paid and unpaid)
+    ///
+    /// # Returns
+    /// Vec of all Bill structs
+    pub fn get_all_bills(env: Env) -> Vec<Bill> {
     // -----------------------------------------------------------------------
     // Backward-compat helpers
     // -----------------------------------------------------------------------
