@@ -156,7 +156,12 @@ mod insurance {
 
     #[contractimpl]
     impl InsuranceTrait for Insurance {
-        fn get_active_policies(_env: Env, _owner: Address) -> Vec<InsurancePolicy> {
+        fn get_active_policies(
+            _env: Env,
+            _owner: Address,
+            _cursor: u32,
+            _limit: u32,
+        ) -> crate::PolicyPage {
             let env = _env;
             let mut policies = Vec::new(&env);
             policies.push_back(InsurancePolicy {
@@ -168,8 +173,13 @@ mod insurance {
                 coverage_amount: 50000,
                 active: true,
                 next_payment_date: 1735689600,
+                schedule_id: None,
             });
-            policies
+            crate::PolicyPage {
+                items: policies,
+                next_cursor: 0,
+                count: 1,
+            }
         }
 
         fn get_total_monthly_premium(_env: Env, _owner: Address) -> i128 {
